@@ -1,14 +1,17 @@
 from phi.agent import Agent, RunResponse
 from phi.model.ollama import Ollama
+from phi.tools.duckduckgo import DuckDuckGo
 
-agent = Agent(
+web_agent = Agent(
+    name="Web Agent",
     model=Ollama(id="llama3.2"),
-    markdown=True
+    tools=[DuckDuckGo()],
+    instructions=["Always include sources"],
+    show_tool_calls=True,
+    markdown=True,
 )
+web_agent.print_response("Tell me about Warren Buffet?", stream=True)
 
 # Get the response in a variable
-run: RunResponse = agent.run("Share a 2 sentence horror story.")
+run: RunResponse = web_agent.run("Tell me about Warren Buffet?")
 print(run.content)
-
-# Print the response in the terminal
-agent.print_response("Share a 2 sentence horror story.")
