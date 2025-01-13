@@ -5,6 +5,7 @@ name = "pypi"
 
 [packages]
 phidata = "*"
+ollama = "*"
 
 [dev-packages]
 
