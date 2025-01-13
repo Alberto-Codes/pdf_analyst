@@ -6,8 +6,11 @@ name = "pypi"
 [packages]
 phidata = "*"
 ollama = "*"
+duckduckgo-search = "*"
 
 [dev-packages]
+black = "*"
+isort = "*"
 
 [requires]
 python_version = "3.13"
