@@ -6,7 +6,11 @@ name = "pypi"
 [packages]
 phidata = "*"
 ollama = "*"
-duckduckgo-search = "*"
+pypdf = "*"
+sqlalchemy = "*"
+chromadb = "*"
+openai = "*"
+tantivy = "*"
 
 [dev-packages]
 black = "*"
