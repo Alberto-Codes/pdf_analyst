@@ -89,9 +89,9 @@ def pdf_agent(user: str = "user") -> None:
         run_id=run_id,
         user_id=user,
         knowledge_base=knowledge_base,
-        read_chat_history=True,
-        add_chat_history_to_messages=True,
-        num_history_responses=3,
+        # read_chat_history=True,
+        # add_chat_history_to_messages=True,
+        # # num_history_responses=3,
         use_tools=True,
         show_tool_calls=True,
         markdown=True,
@@ -109,14 +109,14 @@ def pdf_agent(user: str = "user") -> None:
         reasoning=True,
         reasoning_min_steps=2,
         reasoning_max_steps=6,
-        reasoning_model=Gemini(
-            response_format=str,
-            markdown=True,
-            structured_outputs=True,
-            debug_mode=True,
-            stream=True,
-        ),
-        verbose=True,
+        # reasoning_model=Gemini(
+        #     response_format=str,
+        #     markdown=True,
+        #     structured_outputs=True,
+        #     debug_mode=True,
+        #     stream=True,
+        # ),
+        # verbose=True,
     )
 
     if run_id is None:
