@@ -11,6 +11,8 @@ google-cloud-aiplatform = "*"
 pypdf = "*"
 sqlalchemy = "*"
 chromadb = "*"
+pysqlite3-binary = "*"
+openai = "*"
 
 [dev-packages]
 black = "*"
