@@ -2,8 +2,11 @@
     "name": "Streamlit",
     "image": "mcr.microsoft.com/devcontainers/python:1-3.13-bullseye",
     "features": {
-    "ghcr.io/dhoeric/features/google-cloud-cli:1": {}
-    // "ghcr.io/devcontainers/features/rust:1": {}
+    "ghcr.io/dhoeric/features/google-cloud-cli:1": {},
+    // "ghcr.io/swift-server-community/swift-devcontainer-features/sqlite:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+        "version": "lts"
+    }
     },
     "forwardPorts": [8501, 5678],
     // "postCreateCommand": "pip install --upgrade pip && pip install pipenv && pipenv install --dev",
@@ -29,7 +32,8 @@
                 "GitHub.vscode-pull-request-github",
                 "GitHub.copilot",
                 "GitHub.copilot-chat",
-                "eamodio.gitlens"
+                "eamodio.gitlens",
+                "mtxr.sqltools"
             ]
         }
     }
