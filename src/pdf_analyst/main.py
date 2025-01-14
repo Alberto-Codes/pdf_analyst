@@ -1,22 +1,22 @@
-"""PDF Knowledge Base Chatbot with Ollama and ChromaDb.
+"""PDF Knowledge Base Chatbot with Gemini and ChromaDb.
 
-This script sets up a chatbot that utilizes an Ollama-based language model
+This script sets up a chatbot that utilizes a Gemini-based language model
 and a vector database (ChromaDb) to interact with users based on a PDF
-knowledge base. It enables users to query recipes from a provided PDF file.
+knowledge base. Users can query recipes or other information from a PDF.
 
 Modules:
     typer: CLI utility for running the chatbot.
     phi.agent: Provides the chatbot's agent functionality.
-    phi.embedder.ollama: Embeds text using the Ollama model.
+    phi.embedder.google: Embeds text using the Gemini model.
     phi.knowledge.pdf: Handles knowledge base loading from PDFs.
-    phi.model.ollama: Represents the Ollama-based language model.
+    phi.model.vertexai: Represents the Gemini-based language model.
     phi.vectordb.chroma: Manages vector database storage with ChromaDb.
     rich.prompt: Enables rich-text user input prompts.
 
 Attributes:
-    embedder (OllamaEmbedder): An instance for text embedding.
-    vector_db (ChromaDb): A vector database instance for storing embeddings.
-    knowledge_base (PDFUrlKnowledgeBase): A knowledge base built from a PDF.
+    embedder (GeminiEmbedder): Embeds text using Google's Gemini model.
+    vector_db (ChromaDb): Stores and retrieves vector embeddings.
+    knowledge_base (PDFUrlKnowledgeBase): Stores and retrieves PDF content.
 
 Functions:
     pdf_agent(user: str = "user") -> None:
@@ -33,43 +33,33 @@ Example:
     ```
 """
 
+__import__("pysqlite3")
+import sys
+
+sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+import sqlite3
 from typing import Optional
 
 import typer
 from phi.agent import Agent
-from phi.embedder.ollama import OllamaEmbedder
+from phi.embedder.google import GeminiEmbedder
 from phi.knowledge.pdf import PDFKnowledgeBase, PDFUrlKnowledgeBase
-from phi.model.ollama import Ollama
-# from phi.vectordb.lancedb import LanceDb, SearchType
+from phi.model.vertexai import Gemini
 from phi.vectordb.chroma import ChromaDb
 from rich.prompt import Prompt
 
-embedder = OllamaEmbedder(model="nomic-embed-text", dimensions=2048)
+embedder = GeminiEmbedder()
 
-# vector_db = LanceDb(
-#     table_name="recipes",
-#     uri="./tmp/lancedb",
-#     search_type=SearchType.vector,
-#     embedder=embedder,  # Explicitly pass the OllamaEmbedder
-# )
+vector_db = ChromaDb(collection="books", embedder=embedder, path="./tmp/chromadb")
 
-vector_db=ChromaDb(collection="books", embedder=embedder, path="./tmp/chromadb")
-
-
-# Create a knowledge base from a PDF
-# knowledge_base = PDFUrlKnowledgeBase(
-#     urls=["https://phi-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf"],
-#     vector_db=vector_db,
-# )
-
-knowledge_base = PDFKnowledgeBase(
-    path="C:\\Users\\alber\\source\\repos\\pdf_analyst\\data\\books\\alice30.pdf",
-    vector_db=vector_db, num_documents=5
+# Create a knowledge base from a PDF URL
+knowledge_base = PDFUrlKnowledgeBase(
+    urls=["https://phi-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf"],
+    vector_db=vector_db,
 )
 
-# Load the knowledge base; comment out after the first run
-# knowledge_base.load(recreate=True)
-
+# Load the knowledge base (comment out after the first run)
+knowledge_base.load(recreate=True)
 
 
 def pdf_agent(user: str = "user") -> None:
@@ -94,10 +84,8 @@ def pdf_agent(user: str = "user") -> None:
     """
     run_id: Optional[str] = None
 
-    # reasoning_agent = Agent(model=Ollama(id="llama3.2"), reasoning=True, markdown=True, structured_outputs=True)
-
     agent = Agent(
-        model=Ollama(id="llama3.2"),
+        model=Gemini(),
         run_id=run_id,
         user_id=user,
         knowledge_base=knowledge_base,
@@ -109,17 +97,26 @@ def pdf_agent(user: str = "user") -> None:
         markdown=True,
         debug_mode=True,
         stream=True,
-        description="You are a senior NYT researcher answering questions about a book",
-        task="answer the user's question using the knowledge base",
-        guidelines=["answer the user's question using the knowledge base"],
-        instructions=["search the knowledge base for relevant information", "answer the user's question", "provide text from the knowledge base to support for your answer", "format your output in markdown"],
+        description="You are a senior NYT researcher answering questions about a book.",
+        task="Answer the user's question using the knowledge base.",
+        guidelines=["Answer the user's question using the knowledge base."],
+        instructions=[
+            "Search the knowledge base for relevant information.",
+            "Answer the user's question concisely.",
+            "Provide text from the knowledge base to support the answer.",
+            "Format the response in Markdown.",
+        ],
         reasoning=True,
         reasoning_min_steps=2,
         reasoning_max_steps=6,
-        # reasoning_agent = Agent(model=Ollama(id="llama3.2"), markdown=True, structured_outputs=True, knowledge_base=knowledge_base),
-        reasoning_model=Ollama(id="llama3.2", response_format=str, markdown=True, structured_outputs=True, debug_mode=True, stream=True),
-        # verbose=True,
-
+        reasoning_model=Gemini(
+            response_format=str,
+            markdown=True,
+            structured_outputs=True,
+            debug_mode=True,
+            stream=True,
+        ),
+        verbose=True,
     )
 
     if run_id is None:
@@ -130,7 +127,7 @@ def pdf_agent(user: str = "user") -> None:
 
     while True:
         message = Prompt.ask(f"[bold] :sunglasses: {user} [/bold]")
-        if message in ("exit", "bye"):
+        if message.lower() in ("exit", "bye"):
             break
         agent.print_response(message)
 
