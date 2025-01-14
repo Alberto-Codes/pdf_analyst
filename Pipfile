@@ -6,11 +6,13 @@ name = "pypi"
 [packages]
 phidata = "*"
 ollama = "*"
+pandas = "*"
+openai = "*"
+lancedb = "*"
+tantivy = "*"
 pypdf = "*"
 sqlalchemy = "*"
 chromadb = "*"
-openai = "*"
-tantivy = "*"
 
 [dev-packages]
 black = "*"

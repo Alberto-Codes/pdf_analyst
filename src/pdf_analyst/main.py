@@ -38,29 +38,38 @@ from typing import Optional
 import typer
 from phi.agent import Agent
 from phi.embedder.ollama import OllamaEmbedder
-from phi.knowledge.pdf import PDFUrlKnowledgeBase
+from phi.knowledge.pdf import PDFKnowledgeBase, PDFUrlKnowledgeBase
 from phi.model.ollama import Ollama
+# from phi.vectordb.lancedb import LanceDb, SearchType
 from phi.vectordb.chroma import ChromaDb
 from rich.prompt import Prompt
 
-# Create embedder instance first
-embedder = OllamaEmbedder(model="nomic-embed-text")
+embedder = OllamaEmbedder(model="nomic-embed-text", dimensions=2048)
 
-# Create ChromaDb instance with explicit embedder
-vector_db = ChromaDb(
-    collection="recipes",
-    embedder=embedder,  # Explicitly pass the OllamaEmbedder
-    persistent_client=True,  # Ensure data persistence
-)
+# vector_db = LanceDb(
+#     table_name="recipes",
+#     uri="./tmp/lancedb",
+#     search_type=SearchType.vector,
+#     embedder=embedder,  # Explicitly pass the OllamaEmbedder
+# )
+
+vector_db=ChromaDb(collection="books", embedder=embedder, path="./tmp/chromadb")
+
 
 # Create a knowledge base from a PDF
-knowledge_base = PDFUrlKnowledgeBase(
-    urls=["https://phi-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf"],
-    vector_db=vector_db,
+# knowledge_base = PDFUrlKnowledgeBase(
+#     urls=["https://phi-public.s3.amazonaws.com/recipes/ThaiRecipes.pdf"],
+#     vector_db=vector_db,
+# )
+
+knowledge_base = PDFKnowledgeBase(
+    path="C:\\Users\\alber\\source\\repos\\pdf_analyst\\data\\books\\alice30.pdf",
+    vector_db=vector_db, num_documents=5
 )
 
 # Load the knowledge base; comment out after the first run
-knowledge_base.load(recreate=True)
+# knowledge_base.load(recreate=True)
+
 
 
 def pdf_agent(user: str = "user") -> None:
@@ -85,14 +94,32 @@ def pdf_agent(user: str = "user") -> None:
     """
     run_id: Optional[str] = None
 
+    # reasoning_agent = Agent(model=Ollama(id="llama3.2"), reasoning=True, markdown=True, structured_outputs=True)
+
     agent = Agent(
         model=Ollama(id="llama3.2"),
         run_id=run_id,
         user_id=user,
         knowledge_base=knowledge_base,
+        read_chat_history=True,
+        add_chat_history_to_messages=True,
+        num_history_responses=3,
         use_tools=True,
         show_tool_calls=True,
+        markdown=True,
         debug_mode=True,
+        stream=True,
+        description="You are a senior NYT researcher answering questions about a book",
+        task="answer the user's question using the knowledge base",
+        guidelines=["answer the user's question using the knowledge base"],
+        instructions=["search the knowledge base for relevant information", "answer the user's question", "provide text from the knowledge base to support for your answer", "format your output in markdown"],
+        reasoning=True,
+        reasoning_min_steps=2,
+        reasoning_max_steps=6,
+        # reasoning_agent = Agent(model=Ollama(id="llama3.2"), markdown=True, structured_outputs=True, knowledge_base=knowledge_base),
+        reasoning_model=Ollama(id="llama3.2", response_format=str, markdown=True, structured_outputs=True, debug_mode=True, stream=True),
+        # verbose=True,
+
     )
 
     if run_id is None:
