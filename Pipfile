@@ -5,11 +5,9 @@ name = "pypi"
 
 [packages]
 phidata = "*"
-ollama = "*"
 pandas = "*"
-openai = "*"
-lancedb = "*"
-tantivy = "*"
+google-generativeai = "*"
+google-cloud-aiplatform = "*"
 pypdf = "*"
 sqlalchemy = "*"
 chromadb = "*"

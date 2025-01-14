@@ -1,25 +1,36 @@
 {
     "name": "Streamlit",
-    "image": "python:3.13",
+    "image": "mcr.microsoft.com/devcontainers/python:1-3.13-bullseye",
     "features": {
-      "ghcr.io/dhoeric/features/google-cloud-cli:1": {}
+    "ghcr.io/dhoeric/features/google-cloud-cli:1": {}
+    // "ghcr.io/devcontainers/features/rust:1": {}
     },
     "forwardPorts": [8501, 5678],
-    "postCreateCommand": "pip install --upgrade pip && pip install pipenv && pipenv install --dev",
-    "settings": {
-        "python.pythonPath": "${containerWorkspaceFolder}/.venv/bin/python",
-        "python.formatting.provider": "black",
-        "python.sortImports.args": ["--profile", "black"],
-        "python.linting.enabled": true
+    // "postCreateCommand": "pip install --upgrade pip && pip install pipenv && pipenv install --dev",
+    "postCreateCommand": "pip install --upgrade pip && pip install pipx",
+    "postStartCommand": "printf \"%s\" \"$GCP_UAT_PDF_ANALYST_CREDENTIALS\" > google_application_credentials.json && pipx install pipenv",
+    "postAttachCommand": "gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS && PROJECT_ID=$(jq -r '.project_id' < \"$GOOGLE_APPLICATION_CREDENTIALS\") && gcloud config set project $PROJECT_ID && pipenv install --dev && pipenv shell",
+    "remoteEnv": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "google_application_credentials.json"
     },
-    "extensions": [
-        "ms-python.python",
-        "ms-python.black-formatter",
-        "ms-python.isort",
-        "ms-python.vscode-pylance",
-        "GitHub.vscode-pull-request-github",
-        "GitHub.copilot",
-        "GitHub.copilot-chat",
-        "eamodio.gitlens"
-    ]
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "python.pythonPath": "${containerWorkspaceFolder}/.venv/bin/python",
+                "python.formatting.provider": "black",
+                "python.sortImports.args": ["--profile", "black"],
+                "python.linting.enabled": true
+            },
+            "extensions": [
+                "ms-python.python",
+                "ms-python.black-formatter",
+                "ms-python.isort",
+                "ms-python.vscode-pylance",
+                "GitHub.vscode-pull-request-github",
+                "GitHub.copilot",
+                "GitHub.copilot-chat",
+                "eamodio.gitlens"
+            ]
+        }
+    }
 }
