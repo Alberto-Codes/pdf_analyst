@@ -1,0 +1,25 @@
+{
+    "name": "Streamlit",
+    "image": "python:3.13",
+    "features": {
+      "ghcr.io/dhoeric/features/google-cloud-cli:1": {}
+    },
+    "forwardPorts": [8501, 5678],
+    "postCreateCommand": "pip install --upgrade pip && pip install pipenv && pipenv install --dev",
+    "settings": {
+        "python.pythonPath": "${containerWorkspaceFolder}/.venv/bin/python",
+        "python.formatting.provider": "black",
+        "python.sortImports.args": ["--profile", "black"],
+        "python.linting.enabled": true
+    },
+    "extensions": [
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "ms-python.isort",
+        "ms-python.vscode-pylance",
+        "GitHub.vscode-pull-request-github",
+        "GitHub.copilot",
+        "GitHub.copilot-chat",
+        "eamodio.gitlens"
+    ]
+}
