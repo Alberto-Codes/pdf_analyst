@@ -10,7 +10,7 @@
     },
     "forwardPorts": [8501, 5678],
     // "postCreateCommand": "pip install --upgrade pip && pip install pipenv && pipenv install --dev",
-    "postCreateCommand": "pip install --upgrade pip && pip install pipx",
+    "postCreateCommand": "pip install --upgrade pip && pip install pipx && . ${NVM_DIR}/nvm.sh && nvm install --lts",
     "postStartCommand": "printf \"%s\" \"$GCP_UAT_PDF_ANALYST_CREDENTIALS\" > google_application_credentials.json && pipx install pipenv",
     "postAttachCommand": "gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS && PROJECT_ID=$(jq -r '.project_id' < \"$GOOGLE_APPLICATION_CREDENTIALS\") && gcloud config set project $PROJECT_ID && pipenv install --dev && pipenv shell",
     "remoteEnv": {
@@ -34,7 +34,8 @@
                 "GitHub.copilot-chat",
                 "eamodio.gitlens",
                 "mtxr.sqltools",
-                "mechatroner.rainbow-csv"
+                "mechatroner.rainbow-csv",
+                "mtxr.sqltools-driver-sqlite"
             ]
         }
     }
