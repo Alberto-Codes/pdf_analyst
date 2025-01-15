@@ -14,7 +14,8 @@
     "postStartCommand": "printf \"%s\" \"$GCP_UAT_PDF_ANALYST_CREDENTIALS\" > google_application_credentials.json && pipx install pipenv",
     "postAttachCommand": "gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS && PROJECT_ID=$(jq -r '.project_id' < \"$GOOGLE_APPLICATION_CREDENTIALS\") && gcloud config set project $PROJECT_ID && pipenv install --dev && pipenv shell",
     "remoteEnv": {
-        "GOOGLE_APPLICATION_CREDENTIALS": "google_application_credentials.json"
+        "GOOGLE_APPLICATION_CREDENTIALS": "google_application_credentials.json",
+        "ENVIRONMENT":"uat"
     },
     "customizations": {
         "vscode": {

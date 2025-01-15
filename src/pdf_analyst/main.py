@@ -33,11 +33,11 @@ Example:
     ```
 """
 
-# __import__("pysqlite3")
-# import sys
+__import__("pysqlite3")
+import sys
 
-# sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-# import sqlite3
+sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+import sqlite3
 from typing import Optional
 
 import typer
@@ -68,4 +68,4 @@ def pdf_agent(user: str = "user") -> None:
 
 if __name__ == "__main__":
     # typer.run(pdf_agent)
-    typer.run(pdf_agent(debug=True))
+    typer.run(pdf_agent)

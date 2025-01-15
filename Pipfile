@@ -13,6 +13,7 @@ sqlalchemy = "*"
 chromadb = "*"
 pysqlite3-binary = "*"
 openai = "*"
+ollama = "*"
 
 [dev-packages]
 black = "*"
