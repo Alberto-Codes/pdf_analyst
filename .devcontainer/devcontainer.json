@@ -33,7 +33,8 @@
                 "GitHub.copilot",
                 "GitHub.copilot-chat",
                 "eamodio.gitlens",
-                "mtxr.sqltools"
+                "mtxr.sqltools",
+                "mechatroner.rainbow-csv"
             ]
         }
     }
