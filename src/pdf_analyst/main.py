@@ -50,6 +50,13 @@ from .agents.pdf_agent import PDFAgent
 knowledge_base_service = KnowledgeBaseService()
 knowledge_base_service.load_knowledge_base(recreate=True)
 
+from sqlalchemy.orm import Session
+from .db.session import get_db
+from .db.models import Category  # Assuming you have a Category model
+
+def fetch_categories(session: Session) -> list:
+    return session.query(Category).all()
+
 def pdf_agent(user: str = "user") -> None:
     agent = PDFAgent(knowledge_base=knowledge_base_service.knowledge_base)
     run_id = getattr(agent, 'run_id', None)  # Initialize run_id
@@ -60,12 +67,13 @@ def pdf_agent(user: str = "user") -> None:
     else:
         print(f"Continuing Run: {run_id}\n")
 
-    while True:
-        message = Prompt.ask(f"[bold] :sunglasses: {user} [/bold]")
-        if message.lower() in ("exit", "bye"):
-            break
-        agent.print_response(message)
+    with get_db() as session:
+        categories = fetch_categories(session)
+        for category in categories:
+            question = category.description
+            print(f"Question: {question}")
+            agent.print_response(question)
+
 
 if __name__ == "__main__":
-    # typer.run(pdf_agent)
     typer.run(pdf_agent)
