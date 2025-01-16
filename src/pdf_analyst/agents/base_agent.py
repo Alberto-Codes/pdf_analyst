@@ -2,6 +2,7 @@ from phi.agent import Agent
 from phi.model.ollama import Ollama
 from phi.model.vertexai import Gemini
 from pdf_analyst.utilities.config_loader import load_config  # Add config loader import
+from pdf_analyst.utilities.gcp_token import fetch_gcp_id_token  # Add GCP token import
 
 class BaseAgent(Agent):
     def __init__(self):
@@ -13,7 +14,9 @@ class BaseAgent(Agent):
         model_type = config["model"]  # Direct access since we know it exists
         
         if model_type == "ollama":
-            self.model = Ollama(id=config["model_id"])
+            id_token = fetch_gcp_id_token()
+            extra_headers = {'X-Serverless-Authorization': f'Bearer {id_token}'}
+            self.model = Ollama(id=config["model_id"], host='https://ollama-llama3-136604239102.us-central1.run.app', port=8080, client_params={'headers': extra_headers})
         elif model_type == "gemini":
             self.model = Gemini()
         else:
