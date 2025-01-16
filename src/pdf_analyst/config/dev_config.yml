@@ -1,6 +1,6 @@
 embedder: ollama
 model: ollama
-model_id: llama3.1
+model_id: llama3.2:3b
 agent:
   description: "You are a senior researcher answering questions about a book."
   task: "Answer the user's question using the knowledge base."
