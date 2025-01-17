@@ -76,7 +76,12 @@ Navigate to your Dockerfile directory and build the image:
 
 ```sh
 # Navigate to Dockerfile location
-cd docker-file
+cd ollama-backend
+
+# Activate pipenv shell if .env file exists
+if [ -f .env ]; then
+    pipenv shell
+fi
 
 # Build and push using Cloud Build
 gcloud builds submit \
