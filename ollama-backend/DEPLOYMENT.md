@@ -1,6 +1,31 @@
-# Cloud Run Deployment Guide for PDF Analyst
+# Cloud Run Deployment Guide for PDF Analyst - Ollama LLM Backend
 
-This comprehensive guide provides step-by-step instructions for deploying the PDF Analyst application as a Cloud Run service on Google Cloud Platform (GCP).
+This guide provides instructions for deploying the Ollama LLM backend component of the PDF Analyst application as a Cloud Run service on Google Cloud Platform (GCP). This backend serves Llama 3.2 to answer questions about PDFs using PHI data agents.
+
+## Scope
+
+This deployment guide covers:
+- Only the Ollama LLM backend component
+- Deployment of the Cloud Run service that serves Llama 3.2
+- Authentication setup for the main PDF Analyst service to call this backend
+
+This guide does not cover:
+- Deployment of the main PDF Analyst application
+- PHI data workflow components and their deployment
+- Integration between components
+
+All files referenced in this guide should be located in the `/ollama-backend` directory at the project root, separate from the PHI data workflow code.
+
+## Project Structure
+```
+project-root/
+├── ollama-backend/      # Location of this component
+│   ├── Dockerfile
+│   └── DEPLOYMENT.md
+├── [other-directories]  # Other PDF Analyst components
+```
+
+[Rest of content remains the same from Prerequisites onwards...]
 
 ## Prerequisites
 
