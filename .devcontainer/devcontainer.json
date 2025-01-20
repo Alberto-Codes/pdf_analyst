@@ -15,7 +15,8 @@
     "postAttachCommand": "gcloud auth activate-service-account --key-file=$GOOGLE_APPLICATION_CREDENTIALS && PROJECT_ID=$(jq -r '.project_id' < \"$GOOGLE_APPLICATION_CREDENTIALS\") && gcloud config set project $PROJECT_ID && pipenv install --dev && pipenv shell",
     "remoteEnv": {
         "GOOGLE_APPLICATION_CREDENTIALS": "google_application_credentials.json",
-        "ENVIRONMENT":"uat"
+        "ENVIRONMENT": "uat",
+        "OLLAMA_HOST": "${localEnv:GCP_OLLAMA_ENDPOINT}"
     },
     "customizations": {
         "vscode": {
@@ -38,7 +39,8 @@
                 "mechatroner.rainbow-csv",
                 "mtxr.sqltools-driver-sqlite",
                 "ms-python.debugpy",
-                "ms-azuretools.vscode-docker"
+                "ms-azuretools.vscode-docker",
+                "github.vscode-github-actions"
             ]
         }
     }
