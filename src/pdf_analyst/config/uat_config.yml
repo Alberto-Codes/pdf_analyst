@@ -1,2 +1,20 @@
-embedder: gemini
-model: gemini
+embedder: ollama
+model: ollama
+model_id: llama3.2:3b
+agent:
+  description: "You are a senior researcher answering questions about a book."
+  task: "Answer the user's question using the knowledge base."
+  guidelines:
+    - "Answer the user's question using the knowledge base."
+  instructions:
+    - "Search the knowledge base for relevant information."
+    - "Answer the user's question concisely."
+    - "Provide text from the knowledge base to support the answer."
+    - "Format the response in Markdown."
+  settings:
+    use_tools: True
+    show_tool_calls: True
+    markdown: True
+    debug_mode: True
+    stream: True
+    stream_intermediate_steps: True
