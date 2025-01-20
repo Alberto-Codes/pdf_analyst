@@ -47,19 +47,24 @@ from .services.knowledge_base import KnowledgeBaseService
 from .agents.pdf_agent import PDFAgent
 
 # Initialize and load the knowledge base
-knowledge_base_service = KnowledgeBaseService()
+knowledge_base_service = KnowledgeBaseService(
+    is_url=False,
+    pdf_source="data/pdfs/CUAD_v1/full_contract_pdf/Part_I/Affiliate_Agreements/CreditcardscomInc_20070810_S-1_EX-10.33_362297_EX-10.33_Affiliate Agreement.pdf",
+)
 knowledge_base_service.load_knowledge_base(recreate=True)
 
 from sqlalchemy.orm import Session
 from .db.session import get_db
 from .db.models import Category  # Assuming you have a Category model
 
+
 def fetch_categories(session: Session) -> list:
     return session.query(Category).all()
 
+
 def pdf_agent(user: str = "user") -> None:
     agent = PDFAgent(knowledge_base=knowledge_base_service.knowledge_base)
-    run_id = getattr(agent, 'run_id', None)  # Initialize run_id
+    run_id = getattr(agent, "run_id", None)  # Initialize run_id
 
     if run_id is None:
         run_id = agent.run_id
