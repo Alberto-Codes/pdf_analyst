@@ -75,8 +75,9 @@ def pdf_agent(user: str = "user") -> None:
     with get_db() as session:
         categories = fetch_categories(session)
         for category in categories:
-            question = category.description
-            print(f"Question: {question}")
+            question = f"""Question: I need help finding the {category.name} in this legal contract in your knowledge_base. 
+            A {category.name} is a {category.description}. 
+            I'd like the anser back in this answer_format {category.answer_format}."""
             agent.print_response(question)
 
 

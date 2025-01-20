@@ -33,3 +33,6 @@ class PDFAgent(BaseAgent):
         self.debug_mode = settings.get("debug_mode", True)
         self.stream = settings.get("stream", False)
         self.stream_intermediate_steps = settings.get("stream_intermediate_steps", False)
+        self.search_knowledge=True,
+        # Add a tool to read chat history.
+        self.read_chat_history=True,
