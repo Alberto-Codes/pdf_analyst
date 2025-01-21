@@ -1,9 +1,10 @@
 embedder: ollama
 model: ollama
 model_id: llama3.2:3b
+# model_id: llama3.2_128k
 agent:
   description: "You are a specialized legal contract analyst tasked with finding the {category_name} in this contract. You must provide your response in {answer_format} format."
-  task: "Analyze the contract and find the {category_name}. {category_description}"
+  task: "Analyze the contract in your knowledge base and find the {category_name}. {category_description}"
   guidelines:
     - "Find the specific {category_name} in the contract"
     - "Extract the exact information matching the description: {category_description}"
