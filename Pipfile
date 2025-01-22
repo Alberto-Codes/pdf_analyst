@@ -14,6 +14,11 @@ chromadb = "*"
 pysqlite3-binary = "*"
 openai = "*"
 ollama = "*"
+streamlit = "*"
+nest-asyncio = "*"
+beautifulsoup4 = "*"
+python-docx = "*"
+duckduckgo-search = "*"
 
 [dev-packages]
 black = "*"
