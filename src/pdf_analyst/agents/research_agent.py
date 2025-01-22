@@ -9,38 +9,50 @@ from phi.model.ollama import Ollama
 from phi.storage.agent.sqlite import SqlAgentStorage
 # from phi.tools.duckduckgo import DuckDuckGo
 from phi.vectordb.chroma import ChromaDb
-from phi.document.chunking.agentic import AgenticChunking
+# from phi.document.chunking.agentic import AgenticChunking
 from phi.document.chunking.fixed import FixedSizeChunking
+from phi.embedder.ollama import OllamaEmbedder
 
-from ..models.embedder import EmbedderModel
+# from ..models.embedder import EmbedderModel
 
 # from agents.settings import agent_settings
 
-example_agent_storage = SqlAgentStorage(
-    table_name="example_agent_sessions", db_file="data/example_agent.sqlite"
+research_agent_storage = SqlAgentStorage(
+    table_name="research_agent_sessions", db_file="data/research_agent.sqlite"
 )
-embedder_model = EmbedderModel()
-example_agent_knowledge = AgentKnowledge(
-    num_documents=1,
+
+research_agent_knowledge = AgentKnowledge(
+    num_documents=10,
     vector_db=ChromaDb(
         collection="knowledge_base",
-        embedder=embedder_model.embedder,
-        path="./data/example_agent_knowledge.db",
+        embedder=OllamaEmbedder(
+            # dimensions=2048, 
+            model='nomic-embed-text',
+            host=os.getenv("OLLAMA_HOST", "localhost"),
+            port=8080,
+            client_kwargs={
+                "headers": {
+                    "X-Serverless-Authorization": f"Bearer {google.oauth2.id_token.fetch_id_token(
+                        google.auth.transport.requests.Request(), os.getenv('GCP_OLLAMA_ENDPOINT'))}"
+                }
+            }),
+        path="./data/research_agent_knowledge.db",
         persistent_client=True,
+        # monitoring=True,
     ),
-    chunking_strategy=FixedSizeChunking(chunk_size=500, overlap=100),
+    # chunking_strategy=FixedSizeChunking(chunk_size=500, overlap=100),
 )
 
 
-def get_example_agent(
+def get_research_agent(
     model_id: Optional[str] = None,
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
     debug_mode: bool = False,
 ) -> Agent:
-    """Creates and returns an instance of the Example Agent.
+    """Creates and returns an instance of the Research Agent.
 
-    The Example Agent is a highly advanced AI with access to an extensive
+    The Research Agent is a highly advanced AI with access to an extensive
     knowledge base. It uses the provided model for inference and offers tools
     and instructions for interacting with users effectively.
 
@@ -55,12 +67,12 @@ def get_example_agent(
             to `False`.
 
     Returns:
-        Agent: An instance of the Example Agent configured with the specified
+        Agent: An instance of the Research Agent configured with the specified
         parameters.
     """
     return Agent(
-        name="Example Agent",
-        agent_id="example-agent",
+        name="Research Agent",
+        agent_id="research-agent",
         session_id=session_id,
         user_id=user_id,
         # The model to use for the agent
@@ -93,6 +105,7 @@ def get_example_agent(
             "Always search your knowledge base.\n"
             "  - Search your knowledge base for information.\n"
             "  - Provide answers based on your existing knowledge whenever possible.",
+            "  - Make multiple searches of the knowledge base using different queries.",
             "Provide concise and relevant answers.\n"
             "  - Keep your responses brief and to the point.\n"
             "  - Focus on delivering the most pertinent information without unnecessary detail.",
@@ -111,11 +124,11 @@ def get_example_agent(
         # Add the current date and time to the instructions
         add_datetime_to_instructions=True,
         # Store agent sessions in the database
-        storage=example_agent_storage,
+        storage=research_agent_storage,
         # Enable read the chat history from the database
         read_chat_history=True,
         # Store knowledge in a vector database
-        knowledge=example_agent_knowledge,
+        knowledge=research_agent_knowledge,
         # Enable searching the knowledge base
         search_knowledge=True,
         # Enable monitoring on phidata.app
@@ -125,26 +138,27 @@ def get_example_agent(
         # show_intermediate_results=True,
         # stream=True,
         # stream_intermediate_results=True,
-        add_references=True,
+        # add_references=True,
         read_tool_call_history=True,
         structured_outputs=True,
-        reasoning=True,
-        reasoning_model=Ollama(
-            id='deepseek-r1',
-            # id=model_id,
-            host=os.getenv("OLLAMA_HOST", "localhost"),
-            port=8080,
-            client_params={
-                "headers": {
-                    "X-Serverless-Authorization": f"Bearer {google.oauth2.id_token.fetch_id_token(
-                        google.auth.transport.requests.Request(), os.getenv('GCP_OLLAMA_ENDPOINT'))}"
-                }
-            },
-            # options={"max_tokens": 100},
-            add_datetime_to_instructions=True,
-            search_knowledge=True,
-            show_tool_calls=True,
-            tools=[],
-        ),
+        # reasoning=True,
+        # reasoning_model=Ollama(
+        #     id='deepseek-r1:7b_32k',
+        #     # id=model_id,
+        #     host=os.getenv("OLLAMA_HOST", "localhost"),
+        #     port=8080,
+        #     client_params={
+        #         "headers": {
+        #             "X-Serverless-Authorization": f"Bearer {google.oauth2.id_token.fetch_id_token(
+        #                 google.auth.transport.requests.Request(), os.getenv('GCP_OLLAMA_ENDPOINT'))}"
+        #         }
+        #     },
+        #     # options={"max_tokens": 100},
+        #     add_datetime_to_instructions=True,
+        #     search_knowledge=True,
+        #     show_tool_calls=True,
+        #     structured_outputs=True,
+        #     monitoring=True,
+        # ),
 
     )

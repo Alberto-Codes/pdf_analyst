@@ -1,0 +1,2 @@
+FROM deepseek-r1:7B
+PARAMETER num_ctx 32768

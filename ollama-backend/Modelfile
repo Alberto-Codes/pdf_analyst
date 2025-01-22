@@ -1,2 +1,0 @@
-FROM llama3.2:3B
-PARAMETER num_ctx 131072
