@@ -15,7 +15,8 @@ ENV OLLAMA_KEEP_ALIVE -1
 # Store the model weights in the container image
 ENV LLM_MODEL llama3.2:3b
 ENV EMBED_MODEL nomic-embed-text
-RUN ollama serve & sleep 5 && ollama pull $LLM_MODEL && ollama pull $EMBED_MODEL 
+ENV REASON_MODEL deepseek-r1
+RUN ollama serve & sleep 5 && ollama pull $LLM_MODEL && ollama pull $EMBED_MODEL && ollama pull $REASON_MODEL
 
 # Start Ollama
 ENTRYPOINT ["ollama", "serve"]

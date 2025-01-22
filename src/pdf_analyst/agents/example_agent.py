@@ -9,6 +9,8 @@ from phi.model.ollama import Ollama
 from phi.storage.agent.sqlite import SqlAgentStorage
 # from phi.tools.duckduckgo import DuckDuckGo
 from phi.vectordb.chroma import ChromaDb
+from phi.document.chunking.agentic import AgenticChunking
+from phi.document.chunking.fixed import FixedSizeChunking
 
 from ..models.embedder import EmbedderModel
 
@@ -26,6 +28,7 @@ example_agent_knowledge = AgentKnowledge(
         path="./data/example_agent_knowledge.db",
         persistent_client=True,
     ),
+    chunking_strategy=FixedSizeChunking(chunk_size=500, overlap=100),
 )
 
 
@@ -68,12 +71,17 @@ def get_example_agent(
             client_params={
                 "headers": {
                     "X-Serverless-Authorization": f"Bearer {google.oauth2.id_token.fetch_id_token(
-                google.auth.transport.requests.Request(), os.getenv('GCP_OLLAMA_ENDPOINT'))}"
+                        google.auth.transport.requests.Request(), os.getenv('GCP_OLLAMA_ENDPOINT'))}"
                 }
             },
             options={
-                "temperature": 0.5,
-                "max_tokens": 100,
+                "temperature": 0.5, # The temperature for sampling
+                # "max_tokens": 100, # The maximum number of tokens to generate
+            #     # "top_p": 0.9, # The nucleus sampling parameter
+            #     # "top_k": 50, # The top-k sampling parameter
+            #     # "presence_penalty": 0.0, # The presence penalty
+            #     # "frequency_penalty": 0.0, # The frequency penalty
+            #     # "best_of": 1, # The number of completions to generate and return
             },
         ),
         # Tools available to the agent
@@ -93,8 +101,9 @@ def get_example_agent(
             "  - Ensure you fully understand the inquiry before formulating a response.",
             "Verify the information you provide for accuracy.",
             "Cite reliable sources from the knowledge base.",
+            "Check if your response will answer the user's question.",
         ],
-        task="Answer user queries searching your knowledge base and searching the returned results",
+        task="Answer user queries searching your knowledge base. Perform as many knoweldge base searches as you need",
         # Format responses as markdown
         markdown=True,
         # Show tool calls in the response
@@ -113,8 +122,29 @@ def get_example_agent(
         monitoring=True,
         # Show debug logs
         debug_mode=debug_mode,
-        show_intermediate_results=True,
-        stream_intermediate_results=True,
+        # show_intermediate_results=True,
+        # stream=True,
+        # stream_intermediate_results=True,
         add_references=True,
         read_tool_call_history=True,
+        structured_outputs=True,
+        reasoning=True,
+        reasoning_model=Ollama(
+            id='deepseek-r1',
+            # id=model_id,
+            host=os.getenv("OLLAMA_HOST", "localhost"),
+            port=8080,
+            client_params={
+                "headers": {
+                    "X-Serverless-Authorization": f"Bearer {google.oauth2.id_token.fetch_id_token(
+                        google.auth.transport.requests.Request(), os.getenv('GCP_OLLAMA_ENDPOINT'))}"
+                }
+            },
+            # options={"max_tokens": 100},
+            add_datetime_to_instructions=True,
+            search_knowledge=True,
+            show_tool_calls=True,
+            tools=[],
+        ),
+
     )

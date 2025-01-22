@@ -5,6 +5,18 @@
             "driver": "SQLite",
             "name": "pdf_analyst",
             "database": "data/pdf_analyst.sqlite"
+        },
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "example_agent",
+            "database": "${workspaceFolder:pdf_analyst}/data/example_agent.sqlite"
+        },
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "knowldege_base",
+            "database": "${workspaceFolder:pdf_analyst}/data/example_agent_knowledge.db/chroma.sqlite3"
         }
     ]
 }
