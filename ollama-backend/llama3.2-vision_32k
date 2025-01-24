@@ -1,2 +1,2 @@
-FROM deepseek-r1:7B
+FROM llama3.2-vision
 PARAMETER num_ctx 32768
