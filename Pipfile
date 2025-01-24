@@ -19,6 +19,7 @@ nest-asyncio = "*"
 beautifulsoup4 = "*"
 python-docx = "*"
 duckduckgo-search = "*"
+pydantic-ai = "*"
 
 [dev-packages]
 black = "*"
