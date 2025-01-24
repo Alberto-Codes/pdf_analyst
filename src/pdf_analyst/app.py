@@ -79,7 +79,7 @@ def main():
 
     try:
         result = asyncio.run(use_ollama_model())
-        print(result)
+        print(result.data)
     except Exception as e:
         print(f"An error occurred in main: {e}")
 
