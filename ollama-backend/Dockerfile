@@ -24,7 +24,7 @@ COPY ./$IMAGE_MODEL $IMAGE_MODEL
 
 
 # Store the model weights in the container image
-RUN ollama serve & sleep 5 && ollama pull $EMBED_MODEL && ollama create $LLM_MODEL -f $LLM_MODEL && ollama create $REASON_MODEL -f REASON_MODEL && ollama create $IMAGE_MODEL -f $IMAGE_MODEL
+RUN ollama serve & sleep 5 && ollama pull $EMBED_MODEL && ollama create $LLM_MODEL -f $LLM_MODEL && ollama create $REASON_MODEL -f $REASON_MODEL && ollama create $IMAGE_MODEL -f $IMAGE_MODEL
 
 # Start Ollama
 ENTRYPOINT ["ollama", "serve"]
