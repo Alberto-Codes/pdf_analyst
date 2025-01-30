@@ -7,8 +7,16 @@ from collections.abc import AsyncIterator as AsyncIteratorType
 
 from ibm_watsonx_ai import Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference as WatsonModelInference
-
-from ..models import Model, AgentModel, StreamedResponse, ModelMessage, ModelResponse, Usage, ModelSettings
+from pydantic_ai.models import (
+    Model,
+    AgentModel,
+    StreamedResponse,
+    ModelMessage,
+    ModelResponse,
+    Usage,
+    ModelSettings,
+    ModelResponseStreamEvent
+)
 
 class WatsonXModel(Model):
     """Implementation of IBM WatsonX.ai model for pydantic-ai."""
@@ -77,23 +85,30 @@ class WatsonXAgentModel(AgentModel):
 
     def _convert_message_to_watson_format(self, msg: ModelMessage) -> dict:
         """Convert a pydantic-ai message to WatsonX.ai format."""
-        # Default to 'user' if no role specified
+        # For ModelMessage objects, construct appropriate role
+        # Default to user role for text/content messages
         role = 'user'
+        content = msg.content
+
+        # Handle different message formats
+        if hasattr(msg, 'content') and isinstance(msg.content, dict):
+            # Handle function call responses
+            if 'function_call' in msg.content:
+                role = 'assistant'
+                content = str(msg.content)
+            # Handle function responses
+            elif 'name' in msg.content and 'content' in msg.content:
+                role = 'function'
+                content = str(msg.content['content'])
         
-        # Map message types to roles
-        if msg.type == 'system':
+        # If it's a system message, it will typically be the first message
+        # You might want to implement additional logic here based on your use case
+        if content and content.startswith("You are"):
             role = 'system'
-        elif msg.type == 'assistant':
-            role = 'assistant'
-        elif msg.type == 'user':
-            role = 'user'
-        elif msg.type == 'tool':
-            # Handle tool messages - might need adjustment based on WatsonX.ai's expectations
-            role = 'assistant'
-            
+
         return {
             "role": role,
-            "content": msg.content if isinstance(msg.content, str) else str(msg.content)
+            "content": content if isinstance(content, str) else str(content)
         }
 
     async def request(
