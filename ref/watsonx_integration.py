@@ -15,7 +15,8 @@ from pydantic_ai.models import (
     ModelResponse,
     Usage,
     ModelSettings,
-    ModelResponseStreamEvent
+    ModelResponseStreamEvent,
+    TextPart
 )
 
 class WatsonXModel(Model):
@@ -121,21 +122,25 @@ class WatsonXAgentModel(AgentModel):
         # Make the request to WatsonX.ai
         response = await self.model.achat(messages=watson_messages)
         
+        # Get the generated text from the response
+        generated_text = response["choices"][0]["message"]["content"]
+        
+        # Create text part
+        text_part = TextPart(content=generated_text)
+        
         # Convert WatsonX.ai response to pydantic-ai format
         model_response = ModelResponse(
-            parts=[{
-                "part_kind": "text",
-                "content": response["choices"][0]["message"]["content"]
-            }],
+            parts=[text_part],
             model_name=self.model.model_id,
             timestamp=datetime.now()
         )
         
-        # Extract usage information
+        # Create usage information
+        # WatsonX.ai might return different usage info, so we'll set defaults
+        usage_info = response.get("usage", {})
         usage = Usage(
-            prompt_tokens=response.get("usage", {}).get("prompt_tokens", 0),
-            completion_tokens=response.get("usage", {}).get("completion_tokens", 0),
-            total_tokens=response.get("usage", {}).get("total_tokens", 0)
+            total_tokens=usage_info.get("total_tokens", 0),
+            cost=0.0  # WatsonX.ai might not provide cost information
         )
         
         return model_response, usage
@@ -189,9 +194,11 @@ class WatsonXStreamedResponse(StreamedResponse):
                 if content:
                     # Update usage if available
                     if "usage" in chunk:
-                        self._usage.prompt_tokens += chunk["usage"].get("prompt_tokens", 0)
-                        self._usage.completion_tokens += chunk["usage"].get("completion_tokens", 0)
-                        self._usage.total_tokens += chunk["usage"].get("total_tokens", 0)
+                        usage_info = chunk["usage"]
+                        self._usage = Usage(
+                            total_tokens=usage_info.get("total_tokens", 0),
+                            cost=0.0
+                        )
                     
                     # Add content to parts manager
                     self._parts_manager.append_part(content)
