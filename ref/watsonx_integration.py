@@ -75,6 +75,27 @@ class WatsonXAgentModel(AgentModel):
         self.allow_text_result = allow_text_result
         self.result_tools = result_tools
 
+    def _convert_message_to_watson_format(self, msg: ModelMessage) -> dict:
+        """Convert a pydantic-ai message to WatsonX.ai format."""
+        # Default to 'user' if no role specified
+        role = 'user'
+        
+        # Map message types to roles
+        if msg.type == 'system':
+            role = 'system'
+        elif msg.type == 'assistant':
+            role = 'assistant'
+        elif msg.type == 'user':
+            role = 'user'
+        elif msg.type == 'tool':
+            # Handle tool messages - might need adjustment based on WatsonX.ai's expectations
+            role = 'assistant'
+            
+        return {
+            "role": role,
+            "content": msg.content if isinstance(msg.content, str) else str(msg.content)
+        }
+
     async def request(
         self,
         messages: list[ModelMessage],
@@ -83,10 +104,7 @@ class WatsonXAgentModel(AgentModel):
         """Make a request to the WatsonX.ai model."""
         # Convert pydantic-ai messages to WatsonX.ai format
         watson_messages = [
-            {
-                "role": msg.role,
-                "content": msg.content
-            }
+            self._convert_message_to_watson_format(msg)
             for msg in messages
         ]
         
@@ -118,10 +136,7 @@ class WatsonXAgentModel(AgentModel):
         """Make a streaming request to the WatsonX.ai model."""
         # Convert messages to WatsonX.ai format
         watson_messages = [
-            {
-                "role": msg.role,
-                "content": msg.content
-            }
+            self._convert_message_to_watson_format(msg)
             for msg in messages
         ]
         
