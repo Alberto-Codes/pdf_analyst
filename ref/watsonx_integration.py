@@ -1,319 +1,181 @@
-# watsonx_integration.py
+from __future__ import annotations
 
-from pydantic_ai.models import (
-    Model, AgentModel, override_allow_model_requests,
-    check_allow_model_requests,
-)
-from pydantic_ai.types import (
-    ModelMessage, ModelSettings, ModelResponse, Usage,
-    ModelResponseStreamEvent, StreamedResponse,
-)
-from pydantic import BaseModel, Field
+from datetime import datetime
+from typing import AsyncIterator
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator as AsyncIteratorType
 
-from ibm_watsonx_ai.foundation_models import ModelInference
-from ibm_watsonx_ai.foundation_models.schema import TextGenParameters, TextChatParameters
 from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import ModelInference as WatsonModelInference
 
-import datetime
-from typing import AsyncIterator, Tuple, Optional, Dict, Any, List
-import asyncio
-
-
-class WatsonXParameters(BaseModel):
-    """Parameters for WatsonX model requests"""
-
-    # Common generation parameters
-    temperature: float = Field(0.7, ge=0, le=1)
-    max_new_tokens: int = Field(100, ge=1)
-    min_new_tokens: Optional[int] = Field(None, ge=1)
-    top_p: float = Field(1, ge=0, le=1)
-    top_k: Optional[int] = Field(None, ge=1)
-    random_seed: Optional[int] = None
-    repetition_penalty: Optional[float] = Field(None, ge=0)
-    decoding_method: str = Field("greedy", regex="^(greedy|sample)$")
-
-    # Additional advanced fields from IBM WatsonX docs
-    frequency_penalty: Optional[float] = Field(None, ge=0)
-    presence_penalty: Optional[float] = Field(None, ge=0)
-    n: Optional[int] = Field(None, ge=1, description="Number of responses")
-    time_limit: Optional[int] = Field(None, ge=1)
-    stop_sequences: Optional[List[str]] = None
-
-    # Optionally returning logs / tokens, if used
-    logprobs: Optional[bool] = None
-    top_logprobs: Optional[int] = Field(None, ge=1)
-
-    # For Chat, we can define response_format or length_penalty, if needed
-    # presence_penalty / frequency_penalty also exist in Chat
-
+from ..models import Model, AgentModel, StreamedResponse, ModelMessage, ModelResponse, Usage, ModelSettings
 
 class WatsonXModel(Model):
-    """
-    Custom pydantic-ai Model integration for IBM WatsonX AI with extended features.
-    """
-
+    """Implementation of IBM WatsonX.ai model for pydantic-ai."""
+    
     def __init__(
         self,
-        api_key: str,
-        service_url: str,
-        project_id: str = None,
-        model_id: str = None,
-        parameters: Optional[WatsonXParameters] = None,
-        allow_model_requests: bool = True,
+        model_id: str,
+        credentials: dict | Credentials,
+        project_id: str | None = None,
+        space_id: str | None = None,
     ):
-        # Ensure external requests are allowed
-        check_allow_model_requests()
+        """Initialize WatsonX.ai model.
         
-        self.api_key = api_key
-        self.service_url = service_url
-        self.project_id = project_id
+        Args:
+            model_id: The WatsonX.ai model ID to use
+            credentials: WatsonX.ai credentials
+            project_id: Optional project ID 
+            space_id: Optional space ID
+        """
         self.model_id = model_id
-        self.parameters = parameters or WatsonXParameters()
+        self.credentials = credentials
+        self.project_id = project_id
+        self.space_id = space_id
+        
+        # Initialize the WatsonX.ai model inference
+        self.model = WatsonModelInference(
+            model_id=model_id,
+            credentials=credentials,
+            project_id=project_id,
+            space_id=space_id
+        )
+
+    def name(self) -> str:
+        """Get the name of the model."""
+        return f"watsonx:{self.model_id}"
 
     async def agent_model(
         self,
         *,
-        function_tools: list,
+        function_tools: list,  # ToolDefinition
         allow_text_result: bool,
-        result_tools: list,
+        result_tools: list,  # ToolDefinition
     ) -> AgentModel:
-        check_allow_model_requests()
-
-        creds = Credentials(
-            api_key=self.api_key,
-            url=self.service_url,
-        )
-        
-        # Convert function tools to WatsonX format
-        watsonx_tools = self._convert_tools(function_tools + result_tools)
-        
-        model_inference = ModelInference(
-            model_id=self.model_id,
-            credentials=creds,
-            project_id=self.project_id,
-            params=self.parameters.dict(exclude_none=True)
-        )
-
+        """Create an agent model instance."""
         return WatsonXAgentModel(
-            model_inference=model_inference,
-            tools=watsonx_tools,
-            allow_text_result=allow_text_result
+            model=self.model,
+            function_tools=function_tools,
+            allow_text_result=allow_text_result,
+            result_tools=result_tools
         )
-    
-    def _convert_tools(self, function_tools: list) -> List[Dict[str, Any]]:
-        """Convert pydantic-ai function tools to WatsonX format."""
-        watsonx_tools = []
-        for tool in function_tools:
-            watsonx_tool = {
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description,
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            param.name: {
-                                "type": self._get_param_type(param.type),
-                                "description": param.description
-                            }
-                            for param in tool.parameters
-                        },
-                        "required": [param.name for param in tool.parameters if param.required]
-                    }
-                }
-            }
-            watsonx_tools.append(watsonx_tool)
-        return watsonx_tools
-    
-    def _get_param_type(self, param_type: str) -> str:
-        """Convert Python type hints to JSON Schema types."""
-        type_mapping = {
-            'str': 'string',
-            'int': 'integer',
-            'float': 'number',
-            'bool': 'boolean',
-            'list': 'array',
-            'dict': 'object'
-        }
-        return type_mapping.get(param_type, 'string')
-
 
 class WatsonXAgentModel(AgentModel):
-    """Per-step model for the agent with extended WatsonX functionality."""
+    """Implementation of IBM WatsonX.ai agent model."""
     
     def __init__(
         self,
-        model_inference: ModelInference,
-        tools: List[Dict[str, Any]],
-        allow_text_result: bool
+        model: WatsonModelInference,
+        function_tools: list,
+        allow_text_result: bool,
+        result_tools: list,
     ):
-        self.model_inference = model_inference
-        self.tools = tools
+        self.model = model
+        self.function_tools = function_tools
         self.allow_text_result = allow_text_result
-        self._timestamp = datetime.datetime.utcnow()
+        self.result_tools = result_tools
 
     async def request(
         self,
         messages: list[ModelMessage],
-        model_settings: ModelSettings | None,
-    ) -> Tuple[ModelResponse, Usage]:
-        watsonx_messages = self._convert_messages(messages)
-        
-        try:
-            if len(watsonx_messages) > 1 or not self.allow_text_result:
-                # Use chat endpoint with tools
-                response = await self.model_inference.achat(
-                    messages=watsonx_messages,
-                    tools=self.tools if self.tools else None
-                )
-                model_response = self._process_chat_response(response)
-            else:
-                # Single prompt => use generate endpoint
-                response = await self.model_inference.agenerate(
-                    prompt=watsonx_messages[0]['content']
-                )
-                model_response = self._process_generate_response(response)
-                
-            # Extract usage
-            usage = self._extract_usage(response)
-            
-            return model_response, usage
-        except Exception as e:
-            raise RuntimeError(f"WatsonX request failed: {str(e)}")
-
-    async def request_stream(
-        self,
-        messages: list[ModelMessage],
-        model_settings: ModelSettings | None,
-    ) -> AsyncIterator[StreamedResponse]:
-        watsonx_messages = self._convert_messages(messages)
-        
-        if len(watsonx_messages) > 1 or not self.allow_text_result:
-            stream = self.model_inference.chat_stream(
-                messages=watsonx_messages,
-                tools=self.tools if self.tools else None
-            )
-        else:
-            stream = self.model_inference.generate_text_stream(
-                prompt=watsonx_messages[0]['content']
-            )
-            
-        return WatsonXStreamedResponse(stream)
-
-    def _convert_messages(self, messages: list[ModelMessage]) -> list[dict]:
-        """Map pydantic-ai roles to WatsonX roles, including function calls."""
-        role_mapping = {
-            "system": "system",
-            "user": "user",
-            "assistant": "assistant",
-            "tool": "function"  # If the model calls a 'tool' message
-        }
-        return [
+        model_settings: ModelSettings | None = None,
+    ) -> tuple[ModelResponse, Usage]:
+        """Make a request to the WatsonX.ai model."""
+        # Convert pydantic-ai messages to WatsonX.ai format
+        watson_messages = [
             {
-                "role": role_mapping.get(msg.role, msg.role),
-                "content": msg.content,
-                **({"name": msg.name} if hasattr(msg, 'name') else {})
+                "role": msg.role,
+                "content": msg.content
             }
             for msg in messages
         ]
-
-    def _process_chat_response(self, response: Dict[str, Any]) -> ModelResponse:
-        message = response['choices'][0]['message']
-        content = message.get('content', '')
-        function_call = message.get('function_call')
-
-        if function_call:
-            return ModelResponse(
-                content=content,
-                role="assistant",
-                function_call={
-                    "name": function_call["name"],
-                    "arguments": function_call["arguments"]
-                },
-                finish_reason="function_call"
-            )
         
-        return ModelResponse(
-            content=content,
-            role="assistant",
-            finish_reason="stop"
+        # Make the request to WatsonX.ai
+        response = await self.model.achat(messages=watson_messages)
+        
+        # Convert WatsonX.ai response to pydantic-ai format
+        model_response = ModelResponse(
+            parts=[response["choices"][0]["message"]["content"]],
+            model_name=self.model.model_id,
+            timestamp=datetime.now()
         )
-
-    def _process_generate_response(self, response: Dict[str, Any]) -> ModelResponse:
-        return ModelResponse(
-            content=response['results'][0]['generated_text'],
-            role="assistant",
-            finish_reason="stop"
+        
+        # Extract usage information
+        usage = Usage(
+            prompt_tokens=response.get("usage", {}).get("prompt_tokens", 0),
+            completion_tokens=response.get("usage", {}).get("completion_tokens", 0),
+            total_tokens=response.get("usage", {}).get("total_tokens", 0)
         )
+        
+        return model_response, usage
 
-    def _extract_usage(self, response: Dict[str, Any]) -> Usage:
-        usage_data = response.get('usage', {})
-        return Usage(
-            prompt_tokens=usage_data.get('prompt_tokens', 0),
-            completion_tokens=usage_data.get('completion_tokens', 0),
-            total_tokens=usage_data.get('total_tokens', 0)
+    @asynccontextmanager
+    async def request_stream(
+        self,
+        messages: list[ModelMessage],
+        model_settings: ModelSettings | None = None,
+    ) -> AsyncIterator[StreamedResponse]:
+        """Make a streaming request to the WatsonX.ai model."""
+        # Convert messages to WatsonX.ai format
+        watson_messages = [
+            {
+                "role": msg.role,
+                "content": msg.content
+            }
+            for msg in messages
+        ]
+        
+        # Create streaming response
+        stream = WatsonXStreamedResponse(
+            model=self.model,
+            messages=watson_messages,
+            model_name=self.model.model_id
         )
-
-    @property
-    def timestamp(self) -> datetime.datetime:
-        return self._timestamp
-
+        
+        try:
+            yield stream
+        finally:
+            # Cleanup if needed
+            pass
 
 class WatsonXStreamedResponse(StreamedResponse):
-    """Enhanced streaming response handler for WatsonX."""
+    """Implementation of IBM WatsonX.ai streamed response."""
     
-    def __init__(self, watsonx_stream_generator):
-        self._stream_generator = watsonx_stream_generator
-        self._collected_content = []
-        self._function_calls = []
-        self._usage = Usage(prompt_tokens=0, completion_tokens=0, total_tokens=0)
-        self._model_name = "ibm-watsonx-ai"
-        self._timestamp = datetime.datetime.utcnow()
+    def __init__(
+        self,
+        model: WatsonModelInference,
+        messages: list[dict],
+        model_name: str
+    ):
+        super().__init__(model_name=model_name)
+        self.model = model
+        self.messages = messages
+        self._timestamp = datetime.now()
 
-    async def __aiter__(self) -> AsyncIterator[ModelResponseStreamEvent]:
-        async for chunk in self._stream_generator:
-            delta = chunk['choices'][0]['delta']
-            
-            # Check if there's a partial function call
-            if function_call := delta.get('function_call'):
-                self._function_calls.append(function_call)
-                yield ModelResponseStreamEvent(
-                    content="",
-                    role="assistant",
-                    function_call=function_call,
-                    finish_reason=None
-                )
-            
-            # Handle partial content
-            if content := delta.get('content', ''):
-                self._collected_content.append(content)
-                yield ModelResponseStreamEvent(
-                    content=content,
-                    role="assistant",
-                    finish_reason=None
-                )
+    async def _get_event_iterator(self) -> AsyncIterator[ModelResponseStreamEvent]:
+        """Get async iterator for stream events."""
+        # Use WatsonX.ai chat_stream method
+        stream = self.model.chat_stream(messages=self.messages)
+        
+        for chunk in stream:
+            if "choices" in chunk and chunk["choices"]:
+                content = chunk["choices"][0].get("delta", {}).get("content", "")
+                if content:
+                    # Update usage if available
+                    if "usage" in chunk:
+                        self._usage.prompt_tokens += chunk["usage"].get("prompt_tokens", 0)
+                        self._usage.completion_tokens += chunk["usage"].get("completion_tokens", 0)
+                        self._usage.total_tokens += chunk["usage"].get("total_tokens", 0)
+                    
+                    # Add content to parts manager
+                    self._parts_manager.append_part(content)
+                    
+                    # Yield the stream event
+                    yield ModelResponseStreamEvent(
+                        type="content",
+                        content=content
+                    )
 
-    def get(self) -> ModelResponse:
-        content = "".join(self._collected_content)
-        if self._function_calls:
-            function_call = self._function_calls[-1]
-            return ModelResponse(
-                content=content,
-                role="assistant",
-                function_call=function_call,
-                finish_reason="function_call"
-            )
-        return ModelResponse(
-            content=content,
-            role="assistant",
-            finish_reason="stop"
-        )
-
-    def usage(self) -> Usage:
-        return self._usage
-
-    def model_name(self) -> str:
-        return self._model_name
-
-    def timestamp(self) -> datetime.datetime:
+    def timestamp(self) -> datetime:
+        """Get timestamp of the response."""
         return self._timestamp
