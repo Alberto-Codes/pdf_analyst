@@ -11,13 +11,15 @@ from pydantic_ai.models import (
     Model,
     AgentModel,
     StreamedResponse,
+    Usage
+)
+from pydantic_ai.messages import (
     ModelMessage,
     ModelResponse,
-    Usage,
-    ModelSettings,
     ModelResponseStreamEvent,
-    TextPart
+    TextPart,
 )
+from pydantic_ai.settings import ModelSettings
 
 class WatsonXModel(Model):
     """Implementation of IBM WatsonX.ai model for pydantic-ai."""
@@ -125,21 +127,26 @@ class WatsonXAgentModel(AgentModel):
         # Get the generated text from the response
         generated_text = response["choices"][0]["message"]["content"]
         
-        # Create text part
-        text_part = TextPart(content=generated_text)
+        # Create the response parts
+        parts = [TextPart(content=generated_text)]
         
         # Convert WatsonX.ai response to pydantic-ai format
         model_response = ModelResponse(
-            parts=[text_part],
+            parts=parts,
             model_name=self.model.model_id,
             timestamp=datetime.now()
         )
         
         # Create usage information
-        # WatsonX.ai might return different usage info, so we'll set defaults
-        usage_info = response.get("usage", {})
+        # WatsonX.ai might return different usage info
+        response_info = response.get("results", [{}])[0]
+        total_tokens = (
+            response_info.get("input_token_count", 0) +
+            response_info.get("generated_token_count", 0)
+        )
+        
         usage = Usage(
-            total_tokens=usage_info.get("total_tokens", 0),
+            total_tokens=total_tokens,
             cost=0.0  # WatsonX.ai might not provide cost information
         )
         
@@ -194,9 +201,12 @@ class WatsonXStreamedResponse(StreamedResponse):
                 if content:
                     # Update usage if available
                     if "usage" in chunk:
-                        usage_info = chunk["usage"]
+                        total_tokens = (
+                            chunk.get("input_token_count", 0) +
+                            chunk.get("generated_token_count", 0)
+                        )
                         self._usage = Usage(
-                            total_tokens=usage_info.get("total_tokens", 0),
+                            total_tokens=total_tokens,
                             cost=0.0
                         )
                     
