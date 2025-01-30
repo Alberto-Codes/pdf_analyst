@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import AsyncIterator
+from typing import AsyncIterator, Dict, Any
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator as AsyncIteratorType
 
@@ -28,14 +28,7 @@ class WatsonXModel(Model):
         project_id: str | None = None,
         space_id: str | None = None,
     ):
-        """Initialize WatsonX.ai model.
-        
-        Args:
-            model_id: The WatsonX.ai model ID to use
-            credentials: WatsonX.ai credentials
-            project_id: Optional project ID 
-            space_id: Optional space ID
-        """
+        """Initialize WatsonX.ai model."""
         self.model_id = model_id
         self.credentials = credentials
         self.project_id = project_id
@@ -56,9 +49,9 @@ class WatsonXModel(Model):
     async def agent_model(
         self,
         *,
-        function_tools: list,  # ToolDefinition
+        function_tools: list,
         allow_text_result: bool,
-        result_tools: list,  # ToolDefinition
+        result_tools: list,
     ) -> AgentModel:
         """Create an agent model instance."""
         return WatsonXAgentModel(
@@ -83,33 +76,36 @@ class WatsonXAgentModel(AgentModel):
         self.allow_text_result = allow_text_result
         self.result_tools = result_tools
 
-    def _convert_message_to_watson_format(self, msg: ModelMessage) -> dict:
-        """Convert a pydantic-ai message to WatsonX.ai format."""
-        # For ModelMessage objects, construct appropriate role
-        # Default to user role for text/content messages
-        role = 'user'
-        content = msg.content
-
-        # Handle different message formats
-        if hasattr(msg, 'content') and isinstance(msg.content, dict):
-            # Handle function call responses
-            if 'function_call' in msg.content:
-                role = 'assistant'
-                content = str(msg.content)
-            # Handle function responses
-            elif 'name' in msg.content and 'content' in msg.content:
-                role = 'function'
-                content = str(msg.content['content'])
+    def _convert_part_to_watson_format(self, part: Any) -> dict:
+        """Convert a single part to WatsonX.ai format."""
+        if hasattr(part, 'part_kind'):
+            if part.part_kind == 'system-prompt':
+                return {"role": "system", "content": part.content}
+            elif part.part_kind == 'user-prompt':
+                return {"role": "user", "content": part.content}
+            elif part.part_kind == 'tool-return':
+                # For tool returns, we'll format them as assistant responses
+                return {"role": "assistant", "content": part.model_response_str()}
+            elif part.part_kind == 'retry-prompt':
+                # For retry prompts, we'll format them as user messages
+                if isinstance(part.content, str):
+                    content = part.content
+                else:
+                    content = part.model_response()
+                return {"role": "user", "content": content}
         
-        # If it's a system message, it will typically be the first message
-        # You might want to implement additional logic here based on your use case
-        if content and content.startswith("You are"):
-            role = 'system'
+        # Default fallback
+        return {"role": "user", "content": str(getattr(part, 'content', str(part)))}
 
-        return {
-            "role": role,
-            "content": content if isinstance(content, str) else str(content)
-        }
+    def _convert_request_to_watson_format(self, msg: ModelMessage) -> list[dict]:
+        """Convert a ModelMessage to WatsonX.ai format."""
+        if hasattr(msg, 'parts'):
+            return [
+                self._convert_part_to_watson_format(part) 
+                for part in msg.parts
+            ]
+        # Fallback if we get an unexpected message type
+        return [{"role": "user", "content": str(msg)}]
 
     async def request(
         self,
@@ -117,18 +113,20 @@ class WatsonXAgentModel(AgentModel):
         model_settings: ModelSettings | None = None,
     ) -> tuple[ModelResponse, Usage]:
         """Make a request to the WatsonX.ai model."""
-        # Convert pydantic-ai messages to WatsonX.ai format
-        watson_messages = [
-            self._convert_message_to_watson_format(msg)
-            for msg in messages
-        ]
+        # Convert all messages to WatsonX.ai format
+        watson_messages = []
+        for msg in messages:
+            watson_messages.extend(self._convert_request_to_watson_format(msg))
         
         # Make the request to WatsonX.ai
         response = await self.model.achat(messages=watson_messages)
         
         # Convert WatsonX.ai response to pydantic-ai format
         model_response = ModelResponse(
-            parts=[response["choices"][0]["message"]["content"]],
+            parts=[{
+                "part_kind": "text",
+                "content": response["choices"][0]["message"]["content"]
+            }],
             model_name=self.model.model_id,
             timestamp=datetime.now()
         )
@@ -150,10 +148,9 @@ class WatsonXAgentModel(AgentModel):
     ) -> AsyncIterator[StreamedResponse]:
         """Make a streaming request to the WatsonX.ai model."""
         # Convert messages to WatsonX.ai format
-        watson_messages = [
-            self._convert_message_to_watson_format(msg)
-            for msg in messages
-        ]
+        watson_messages = []
+        for msg in messages:
+            watson_messages.extend(self._convert_request_to_watson_format(msg))
         
         # Create streaming response
         stream = WatsonXStreamedResponse(
@@ -165,7 +162,6 @@ class WatsonXAgentModel(AgentModel):
         try:
             yield stream
         finally:
-            # Cleanup if needed
             pass
 
 class WatsonXStreamedResponse(StreamedResponse):
