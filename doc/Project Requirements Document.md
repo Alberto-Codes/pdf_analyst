@@ -43,10 +43,28 @@
 Below is a high-level flowchart illustrating the main stages of the MVP process:
 
 ```mermaid
-flowchart LR
-    A[SEC 10-K Filings] --> B[Automated Extraction]
-    B --> C[Data Validation & Quality Assurance]
-    C --> D[Structured Data Output]
-    D --> E[Traceability: Source Linkage]
-    E --> F[Audit Logging & Review]
-    B -- Error Detected --> G[Error Handling & Fallback]
+flowchart TD
+    A[Input: SEC 10-K Filing] --> B[Document Preprocessing]
+    B --> C[Text Extraction]
+    C --> D{Quality Check}
+    D -->|Pass| E[Data Extraction]
+    D -->|Fail| F[Error Logger]
+    F --> G[Manual Review Queue]
+    E --> H{Validation}
+    H -->|Pass| I[Data Structuring]
+    H -->|Fail| J[Extraction Error Handler]
+    J --> K[Retry with Fallback Method]
+    K --> E
+    I --> L[Output Generation]
+    L --> M[Final Quality Check]
+    M -->|Pass| N[Store Results]
+    M -->|Fail| O[Flag for Review]
+    
+    subgraph Logging
+    P[Process Logger]
+    Q[Audit Trail]
+    end
+    
+    B & C & E & I --> P
+    P --> Q
+```
