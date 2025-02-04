@@ -50,7 +50,8 @@ import os
 from typing import Annotated
 
 from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_core.tools import tool
+from langchain_core.messages import ToolMessage
+from langchain_core.tools import InjectedToolCallId, tool
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
@@ -69,6 +70,8 @@ class State(TypedDict):
     """
 
     messages: Annotated[list, add_messages]
+    name: str
+    birthday: str
 
 
 # Initialize the state graph
@@ -76,29 +79,43 @@ graph_builder = StateGraph(State)
 
 
 @tool
-def human_assistance(query: str) -> str:
-    """Requests assistance from a human operator.
+def human_assistance(
+    name: str, birthday: str, tool_call_id: Annotated[str, InjectedToolCallId]
+) -> str:
+    """Request assistance from a human."""
+    human_response = interrupt(
+        {
+            "question": "Is this correct?",
+            "name": name,
+            "birthday": birthday,
+        },
+    )
+    # If the information is correct, update the state as-is.
+    if human_response.get("correct", "").lower().startswith("y"):
+        verified_name = name
+        verified_birthday = birthday
+        response = "Correct"
+    # Otherwise, receive information from the human reviewer.
+    else:
+        verified_name = human_response.get("name", name)
+        verified_birthday = human_response.get("birthday", birthday)
+        response = f"Made a correction: {human_response}"
 
-    This function is triggered when the chatbot determines that
-    human intervention is required. It interrupts the chatbot flow
-    and allows a human response.
-
-    Args:
-        query (str): The query requiring human assistance.
-
-    Returns:
-        str: The response provided by a human.
-    """
-    human_response = interrupt({"query": query})
-    return human_response["data"]
+    # This time we explicitly update the state with a ToolMessage inside
+    # the tool.
+    state_update = {
+        "name": verified_name,
+        "birthday": verified_birthday,
+        "messages": [ToolMessage(response, tool_call_id=tool_call_id)],
+    }
+    # We return a Command object in the tool to update our state.
+    return Command(update=state_update)
 
 
 # Initialize DuckDuckGo search tool
-web_search = DuckDuckGoSearchRun(max_results=2)
+web_search = DuckDuckGoSearchRun(max_results=2, verbose=True)
 tools = [web_search, human_assistance]
 
-# Initialize memory saver for state persistence
-memory = MemorySaver()
 
 # Fetch authentication token for secure API access
 token = fetch_gcp_id_token()
@@ -127,7 +144,9 @@ def chatbot(state: State) -> State:
     Returns:
         State: Updated conversation state with the assistant's response.
     """
-    return {"messages": [llm_with_tools.invoke(state["messages"])]}
+    message = llm_with_tools.invoke(state["messages"])
+    assert len(message.tool_calls) <= 1
+    return {"messages": [message]}
 
 
 # Add nodes to the state graph
@@ -141,15 +160,16 @@ graph_builder.add_node("tools", tool_node)
 graph_builder.add_conditional_edges("chatbot", tools_condition)
 graph_builder.add_edge("tools", "chatbot")
 
+
 # Set chatbot as the entry point
-graph_builder.set_entry_point("chatbot")
+# graph_builder.set_entry_point("chatbot")
+graph_builder.add_edge(START, "chatbot")
+
+# Initialize memory saver for state persistence
+memory = MemorySaver()
 
 # Compile the state graph with checkpointing
 graph = graph_builder.compile(checkpointer=memory)
-
-# Configuration settings for the chatbot session
-config = {"configurable": {"thread_id": "1"}}
-
 
 def stream_graph_updates(user_input: str) -> None:
     """Streams responses from the chatbot in real-time.
@@ -168,24 +188,37 @@ def stream_graph_updates(user_input: str) -> None:
         config=config,
         stream_mode="values",
     ):
-        event["messages"][-1].pretty_print()
+        if "messages" in event:
+            event["messages"][-1].pretty_print()
 
+if __name__ == "__main__":
+    # Visualize the conversation flow graph
+    print(graph.get_graph().draw_mermaid())
 
-# Visualize the conversation flow graph
-print(graph.get_graph().draw_mermaid())
+    user_input = (
+        "Can you look up when LangGraph was released?"
+        "Always invoke the human_assistance tool for approval." 
+        "We need a human to verify the information."
+    )
+    config = {"configurable": {"thread_id": "1"}}
 
-# Start an interactive chatbot session
-while True:
-    try:
-        user_input = input("User: ")
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("Goodbye!")
-            break
+    events = graph.stream(
+        {"messages": [{"role": "user", "content": user_input}]},
+        config,
+        stream_mode="values",
+    )
+    for event in events:
+        if "messages" in event:
+            event["messages"][-1].pretty_print()
 
-        stream_graph_updates(user_input)
-    except Exception:
-        # Fallback scenario if input() is unavailable
-        user_input = "What do you know about LangGraph?"
-        print("User: " + user_input)
-        stream_graph_updates(user_input)
-        break
+    human_command = Command(
+        resume={
+            "name": "LangGraph",
+            "birthday": "Jan 17, 2024",
+        },
+    )
+
+    events = graph.stream(human_command, config, stream_mode="values")
+    for event in events:
+        if "messages" in event:
+            event["messages"][-1].pretty_print()
