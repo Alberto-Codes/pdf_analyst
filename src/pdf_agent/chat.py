@@ -46,8 +46,6 @@ import os
 from typing import Annotated
 
 from langchain_community.tools import DuckDuckGoSearchRun
-from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_core.messages import BaseMessage, ToolMessage
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
