@@ -20,10 +20,16 @@ beautifulsoup4 = "*"
 python-docx = "*"
 duckduckgo-search = "*"
 pydantic-ai = "*"
+langgraph = "*"
+langsmith = "*"
+langchain = "*"
+langchain-community = "*"
+langchain-ollama = "*"
 
 [dev-packages]
 black = "*"
 isort = "*"
+ipython = "*"
 
 [requires]
 python_version = "3.13"
