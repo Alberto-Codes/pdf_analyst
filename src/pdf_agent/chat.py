@@ -49,6 +49,7 @@ from langchain_community.tools import DuckDuckGoSearchRun
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.messages import BaseMessage, ToolMessage
 from langchain_ollama import ChatOllama
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
@@ -57,10 +58,10 @@ from utils.gcp_token import fetch_gcp_id_token
 
 
 class State(TypedDict):
-    """Defines the chatbot state.
+    """Represents the chatbot's conversation state.
 
     Attributes:
-        messages (list): A list of messages passed in the conversation.
+        messages (list): A list of messages exchanged in the conversation.
     """
 
     messages: Annotated[list, add_messages]
@@ -72,6 +73,9 @@ graph_builder = StateGraph(State)
 # Initialize DuckDuckGo search tool
 tool = DuckDuckGoSearchRun(max_results=2)
 tools = [tool]
+
+# Initialize memory saver for state persistence
+memory = MemorySaver()
 
 # Fetch authentication token for secure API access
 token = fetch_gcp_id_token()
@@ -99,24 +103,25 @@ def chatbot(state: State) -> State:
     return {"messages": [llm_with_tools.invoke(state["messages"])]}
 
 
-# Add chatbot node to the graph
+# Add nodes to the state graph
 graph_builder.add_node("chatbot", chatbot)
 
-# Add tool node for handling external search tools
+# Initialize tool node and add to the graph
 tool_node = ToolNode(tools=[tool])
 graph_builder.add_node("tools", tool_node)
 
-# Define conditional edges based on tool invocation
+# Define conditional and sequential transitions
 graph_builder.add_conditional_edges("chatbot", tools_condition)
-
-# Ensure the chatbot node is revisited after tool execution
 graph_builder.add_edge("tools", "chatbot")
 
-# Set the chatbot as the entry point of the conversation
+# Set chatbot as the entry point
 graph_builder.set_entry_point("chatbot")
 
-# Compile the graph for execution
-graph = graph_builder.compile()
+# Compile the state graph with checkpointing
+graph = graph_builder.compile(checkpointer=memory)
+
+# Configuration settings for the chatbot session
+config = {"configurable": {"thread_id": "1"}}
 
 
 def stream_graph_updates(user_input: str) -> None:
@@ -128,10 +133,16 @@ def stream_graph_updates(user_input: str) -> None:
     Prints:
         The assistant's response to the terminal.
     """
-    for event in graph.stream({"messages": [{"role": "user", "content": user_input}]}):
-        for value in event.values():
-            print("Assistant:", value["messages"][-1].content)
+    for event in graph.stream(
+        {"messages": [{"role": "user", "content": user_input}]},
+        config=config,
+        stream_mode="values",
+    ):
+        event["messages"][-1].pretty_print()
 
+
+# Visualize the conversation flow graph
+print(graph.get_graph().draw_mermaid())
 
 # Start an interactive chatbot session
 while True:
@@ -142,7 +153,7 @@ while True:
             break
 
         stream_graph_updates(user_input)
-    except:
+    except Exception:
         # Fallback scenario if input() is unavailable
         user_input = "What do you know about LangGraph?"
         print("User: " + user_input)
