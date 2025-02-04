@@ -4,32 +4,17 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-phidata = "*"
-pandas = "*"
-google-generativeai = "*"
-google-cloud-aiplatform = "*"
-pypdf = "*"
-sqlalchemy = "*"
-chromadb = "*"
-pysqlite3-binary = "*"
-openai = "*"
-ollama = "*"
-streamlit = "*"
-nest-asyncio = "*"
-beautifulsoup4 = "*"
-python-docx = "*"
-duckduckgo-search = "*"
-pydantic-ai = "*"
 langgraph = "*"
 langsmith = "*"
 langchain = "*"
-langchain-community = "*"
 langchain-ollama = "*"
+duckduckgo-search = "*"
+langchain-community = "*"
+google-auth = "*"
 
 [dev-packages]
 black = "*"
 isort = "*"
-ipython = "*"
 
 [requires]
 python_version = "3.13"

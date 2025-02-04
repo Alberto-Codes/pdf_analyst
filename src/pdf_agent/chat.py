@@ -1,11 +1,18 @@
+import json
 import os
 from typing import Annotated
 
+from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.messages import BaseMessage, ToolMessage
 from langchain_ollama import ChatOllama
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
+from langgraph.prebuilt import ToolNode, tools_condition
 from typing_extensions import TypedDict
 from utils.gcp_token import fetch_gcp_id_token
+
+
 
 
 class State(TypedDict):
@@ -21,18 +28,27 @@ class State(TypedDict):
 # Initialize the state graph
 graph_builder = StateGraph(State)
 
+
+# Initialize DuckDuckGo search
+tool = DuckDuckGoSearchRun(
+    max_results=2,
+)
+tools = [tool]
 # Fetch authentication token for secure API access
 token = fetch_gcp_id_token()
 
 # Set up the language model
 llm = ChatOllama(
-    model="llama3.2",
+    model="llama3.2_32k",
+    # model="deepseek-r1_32k",
     base_url=os.getenv("OLLAMA_HOST"),
     client_kwargs={"headers": {"X-Serverless-Authorization": f"Bearer {token}"}},
 )
 
+llm_with_tools = llm.bind_tools(tools)
 
-def chatbot(state: State) -> State:
+
+def chatbot(state: State):
     """Processes chatbot responses using the LLM.
 
     Args:
@@ -41,15 +57,20 @@ def chatbot(state: State) -> State:
     Returns:
         State: Updated conversation state with the assistant's response.
     """
-    return {"messages": [llm.invoke(state["messages"])]}
+    return {"messages": [llm_with_tools.invoke(state["messages"])]}
 
-
-# Add nodes and edges to the graph
 graph_builder.add_node("chatbot", chatbot)
-graph_builder.add_edge(START, "chatbot")
-graph_builder.add_edge("chatbot", END)
 
-# Compile the state graph
+tool_node = ToolNode(tools=[tool])
+graph_builder.add_node("tools", tool_node)
+
+graph_builder.add_conditional_edges(
+    "chatbot",
+    tools_condition,
+)
+# Any time a tool is called, we return to the chatbot to decide the next step
+graph_builder.add_edge("tools", "chatbot")
+graph_builder.set_entry_point("chatbot")
 graph = graph_builder.compile()
 
 
@@ -67,7 +88,6 @@ def stream_graph_updates(user_input: str) -> None:
             print("Assistant:", value["messages"][-1].content)
 
 
-# Interactive chat loop
 while True:
     try:
         user_input = input("User: ")
@@ -76,11 +96,9 @@ while True:
             break
 
         stream_graph_updates(user_input)
-
-    except Exception as e:
-        # Fallback for input errors (e.g., running in environments without `input()`)
+    except:
+        # fallback if input() is not available
         user_input = "What do you know about LangGraph?"
-        print("User:", user_input)
+        print("User: " + user_input)
         stream_graph_updates(user_input)
-        print(f"Error encountered: {e}")
         break
