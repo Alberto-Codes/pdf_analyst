@@ -8,23 +8,27 @@ processes user queries, searches for relevant information when needed,
 and generates responses in real-time.
 
 Modules:
-    json: Provides JSON serialization and deserialization.
     os: Accesses environment variables.
     typing: Supports type hints, including `Annotated`.
     langchain_community.tools: Includes the `DuckDuckGoSearchRun` tool.
-    langchain_core.messages: Defines message structures.
+    langchain_core.tools: Provides general tooling support.
     langchain_ollama: Integrates the `ChatOllama` LLM.
     langgraph.graph: Manages the state graph.
     langgraph.graph.message: Handles message processing.
     langgraph.prebuilt: Includes prebuilt graph components.
+    langgraph.checkpoint.memory: Provides in-memory state saving.
+    langgraph.types: Includes command handling and interruptions.
     typing_extensions: Provides additional typing utilities.
     utils.gcp_token: Fetches a secure GCP authentication token.
 
 Classes:
     State:
-        Defines the chatbot state, storing conversation messages.
+        Represents the chatbot state, storing conversation messages.
 
 Functions:
+    human_assistance(query: str) -> str:
+        Requests human intervention when needed.
+
     chatbot(state: State) -> State:
         Processes chatbot responses using the LLM.
 
@@ -46,11 +50,13 @@ import os
 from typing import Annotated
 
 from langchain_community.tools import DuckDuckGoSearchRun
+from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode, tools_condition
+from langgraph.types import Command, interrupt
 from typing_extensions import TypedDict
 from utils.gcp_token import fetch_gcp_id_token
 
@@ -68,9 +74,28 @@ class State(TypedDict):
 # Initialize the state graph
 graph_builder = StateGraph(State)
 
+
+@tool
+def human_assistance(query: str) -> str:
+    """Requests assistance from a human operator.
+
+    This function is triggered when the chatbot determines that
+    human intervention is required. It interrupts the chatbot flow
+    and allows a human response.
+
+    Args:
+        query (str): The query requiring human assistance.
+
+    Returns:
+        str: The response provided by a human.
+    """
+    human_response = interrupt({"query": query})
+    return human_response["data"]
+
+
 # Initialize DuckDuckGo search tool
-tool = DuckDuckGoSearchRun(max_results=2)
-tools = [tool]
+web_search = DuckDuckGoSearchRun(max_results=2)
+tools = [web_search, human_assistance]
 
 # Initialize memory saver for state persistence
 memory = MemorySaver()
@@ -92,6 +117,10 @@ llm_with_tools = llm.bind_tools(tools)
 def chatbot(state: State) -> State:
     """Processes chatbot responses using the LLM.
 
+    This function takes the current conversation state, forwards
+    it to the language model, and returns an updated state with
+    the assistant's response.
+
     Args:
         state (State): The conversation state containing previous messages.
 
@@ -105,7 +134,7 @@ def chatbot(state: State) -> State:
 graph_builder.add_node("chatbot", chatbot)
 
 # Initialize tool node and add to the graph
-tool_node = ToolNode(tools=[tool])
+tool_node = ToolNode(tools=tools)
 graph_builder.add_node("tools", tool_node)
 
 # Define conditional and sequential transitions
@@ -124,6 +153,9 @@ config = {"configurable": {"thread_id": "1"}}
 
 def stream_graph_updates(user_input: str) -> None:
     """Streams responses from the chatbot in real-time.
+
+    This function takes user input, processes it through the chatbot
+    pipeline, and prints the assistant's response.
 
     Args:
         user_input (str): The user's input message.
