@@ -11,6 +11,7 @@ langchain-ollama = "*"
 duckduckgo-search = "*"
 langchain-community = "*"
 google-auth = "*"
+docling = "*"
 
 [dev-packages]
 black = "*"
