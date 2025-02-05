@@ -4,15 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-phidata = "*"
-pandas = "*"
-google-generativeai = "*"
-google-cloud-aiplatform = "*"
-pypdf = "*"
-sqlalchemy = "*"
-chromadb = "*"
-pysqlite3-binary = "*"
-openai = "*"
+agno = "*"
 ollama = "*"
 
 [dev-packages]
