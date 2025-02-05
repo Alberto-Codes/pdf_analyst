@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 agno = "*"
 ollama = "*"
+docling = "*"
 
 [dev-packages]
 black = "*"
