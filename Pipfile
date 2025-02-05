@@ -12,6 +12,7 @@ duckduckgo-search = "*"
 langchain-community = "*"
 google-auth = "*"
 docling = "*"
+langchain-nomic = "*"
 
 [dev-packages]
 black = "*"
