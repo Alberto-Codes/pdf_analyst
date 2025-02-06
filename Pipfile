@@ -6,12 +6,15 @@ name = "pypi"
 [packages]
 agno = "*"
 ollama = "*"
-docling = "*"
 sqlalchemy = "*"
+langchain-ollama = "*"
+langchain-docling = "*"
+langchain-chroma = "*"
+langchain-community = "*"
 
 [dev-packages]
 black = "*"
 isort = "*"
 
 [requires]
-python_version = "3.13"
+python_version = "3.12"
