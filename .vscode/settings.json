@@ -5,6 +5,12 @@
             "driver": "SQLite",
             "name": "pdf_analyst",
             "database": "data/pdf_analyst.sqlite"
+        },
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "agno",
+            "database": "./tmp/workflows.db"
         }
     ]
 }
