@@ -4,13 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-agno = "*"
-ollama = "*"
-sqlalchemy = "*"
-langchain-ollama = "*"
-langchain-docling = "*"
-langchain-chroma = "*"
-langchain-community = "*"
+google-genai = "*"
 
 [dev-packages]
 black = "*"
