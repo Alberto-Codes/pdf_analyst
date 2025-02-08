@@ -5,6 +5,8 @@ name = "pypi"
 
 [packages]
 google-genai = "*"
+google-api-core = "*"
+google-cloud-core = "*"
 
 [dev-packages]
 black = "*"
