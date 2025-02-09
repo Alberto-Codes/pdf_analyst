@@ -6,8 +6,11 @@ from base_types import ExtractionTemplate
 from config import GeminiConfig
 from document_config import DocumentConfig
 from graph import Graph
-from graph_nodes import GenericExtractNode, GraphState
 from models import ExtractionResult
+from nodes.base import GraphState
+from nodes.export import ExportNode
+from nodes.extract import ExtractNode
+from nodes.parse import ParseNode
 
 
 @dataclass
@@ -40,12 +43,12 @@ class WorkflowExecutor:
                 output_path=output_path,
             )
 
-            start_node = GenericExtractNode(config=self.config, template=self.template)
+            start_node = ExtractNode(config=self.config, template=self.template)
             workflow = Graph(
                 nodes={
-                    "extract": GenericExtractNode,
-                    "parse": GraphState,  # Updated with correct node
-                    "export": GraphState,  # Updated with correct node
+                    "extract": ExtractNode,
+                    "parse": ParseNode,
+                    "export": ExportNode,
                 }
             )
 
