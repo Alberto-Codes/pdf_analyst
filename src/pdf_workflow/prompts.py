@@ -35,14 +35,16 @@ class PromptTemplate:
     """
 
     @classmethod
-    def create_extraction_content(cls, document: types.Part) -> list[types.Content]:
+    def create_extraction_content(
+        cls, document: types.Part, prompt_text: str
+    ) -> list[types.Content]:
         """Create content for officer extraction."""
         return [
             types.Content(
                 role="user",
                 parts=[
                     document,
-                    types.Part.from_text(text=cls.OFFICER_EXTRACTION_TEMPLATE),
+                    types.Part.from_text(text=prompt_text),
                 ],
             )
         ]
