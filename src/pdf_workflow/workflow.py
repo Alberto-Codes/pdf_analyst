@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import base64
 import json
 
 from config import GeminiConfig
 from google.api_core import retry
 from google.genai import types
 from models import Citation, ExtractionResult, Officer
+from prompts import PromptTemplate
+from utils import encode_pdf
 
 
 class GeminiPDFParser:
@@ -18,70 +19,25 @@ class GeminiPDFParser:
         self.model = self.config.model
         self.generate_config = self.config.create_generate_config()
 
-    def _encode_pdf(self, pdf_path: str) -> str:
-        try:
-            with open(pdf_path, "rb") as file:
-                pdf_data = file.read()
-                return base64.b64encode(pdf_data).decode("utf-8")
-        except FileNotFoundError:
-            raise FileNotFoundError(f"PDF file not found at path: {pdf_path}")
-        except IOError as e:
-            raise IOError(f"Error reading PDF file: {str(e)}")
-
     @retry.Retry(predicate=retry.if_transient_error)
     def extract_officers(self, pdf_path: str) -> ExtractionResult:
         """Extract officer information from a PDF document."""
         try:
-            encoded_pdf = self._encode_pdf(pdf_path)
-
+            encoded_pdf = encode_pdf(pdf_path)  # Using the utility function
             document = types.Part.from_bytes(
                 data=encoded_pdf,
                 mime_type="application/pdf",
             )
 
-            prompt = """
-            Extract officers' information and provide detailed citations.
-            Format the response as a JSON object with the following structure:
-            {
-                "officers": [
-                    {
-                        "name": "string",
-                        "age": "string",
-                        "title": "string",
-                        "citations": [
-                            {
-                                "page_number": number,
-                                "text_snippet": "string",
-                                "confidence_score": number
-                            }
-                        ]
-                    }
-                ]
-            }
-            
-            For each citation:
-            - Include the page number where the information was found
-            - Include a brief text snippet from the page (max 100 chars)
-            - Provide a confidence score (0.0-1.0) for the citation
-            
-            Use empty string '' for missing values in name, age, or title.
-            """
-
-            contents = [
-                types.Content(
-                    role="user",
-                    parts=[document, types.Part.from_text(text=prompt)],
-                )
-            ]
+            contents = PromptTemplate.create_extraction_content(document)
 
             response_text = ""
             for chunk in self.client.models.generate_content_stream(
                 model=self.model,
                 contents=contents,
-                config=self.generate_config,  # use generate_config instead of self.config
+                config=self.generate_config,
             ):
                 response_text += chunk.text
-
             try:
                 result = json.loads(response_text)
                 officers = []
