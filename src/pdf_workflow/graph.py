@@ -1,32 +1,30 @@
 from typing import Dict, Generic, List, Tuple, Type, TypeVar
 
 from nodes.extract import BaseNode, End, GraphState
+from pydantic_graph import Graph as PydanticGraph
+from pydantic_graph import GraphRunContext
 
 T = TypeVar("T")
 
 
-class Graph(Generic[T]):
-    """Simple graph implementation for workflow execution."""
+class Graph(PydanticGraph[GraphState, T]):
+    """Graph implementation using pydantic-graph for structured workflow execution."""
 
-    def __init__(self, nodes: Dict[str, Type[BaseNode[GraphState]]]):
+    def __init__(self, nodes: Dict[str, Type[BaseNode]]):
         """Nodes should be passed as a dictionary with explicit names."""
         self.nodes = nodes
 
-    def get_node(self, node_name: str) -> Type[BaseNode[GraphState]]:
-        """Retrieve a node by its name, enforcing structured workflow."""
-        if node_name not in self.nodes:
-            raise ValueError(f"Node '{node_name}' not found in the workflow.")
-        return self.nodes[node_name]
-
     async def run(
-        self, start_node: BaseNode[GraphState], state: GraphState
-    ) -> Tuple[T, List[BaseNode[GraphState]]]:
+        self, start_node: BaseNode, state: GraphState
+    ) -> Tuple[T, List[BaseNode]]:
+        """Run the graph with a wrapped GraphRunContext."""
+        ctx = GraphRunContext(state=state, deps={})
         history = []
         current_node = start_node
 
         while True:
             history.append(current_node)
-            result = await current_node.run(state)
+            result = await current_node.run(ctx)
 
             if isinstance(result, End):
                 return result.data, history

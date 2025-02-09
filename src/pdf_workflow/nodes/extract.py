@@ -9,25 +9,29 @@ from models import ExtractionResult
 from nodes.base import BaseNode, End, GraphState
 from nodes.parse import ParseNode
 from prompts import PromptTemplate
+from pydantic_graph import GraphRunContext
 from utils import encode_file
 
 
 @dataclass
-class ExtractNode(BaseNode[GraphState]):
+class ExtractNode(BaseNode):
     """Generic node for extracting entities with citations."""
 
     config: GeminiConfig
     template: ExtractionTemplate
 
-    async def run(self, state: GraphState) -> ParseNode | End[ExtractionResult]:
+    async def run(
+        self, ctx: GraphRunContext[GraphState]
+    ) -> ParseNode | End[ExtractionResult]:
         try:
+
             encoded_file = encode_file(
-                state.document_path, encoding=state.document_config.encoding
+                ctx.state.document_path, encoding=ctx.state.document_config.encoding
             )
 
             document = types.Part.from_bytes(
                 data=encoded_file,
-                mime_type=state.document_config.mime_type,
+                mime_type=ctx.state.document_config.mime_type,
             )
 
             contents = PromptTemplate.create_extraction_content(
@@ -35,7 +39,7 @@ class ExtractNode(BaseNode[GraphState]):
             )
 
             response_text = ""
-            if state.document_config.stream_response:
+            if ctx.state.document_config.stream_response:
                 for chunk in self.config.client.models.generate_content_stream(
                     model=self.config.model,
                     contents=contents,
@@ -50,8 +54,9 @@ class ExtractNode(BaseNode[GraphState]):
                 )
                 response_text = response.text
 
-            state.raw_response = response_text
-            state.field_order = self.template.field_order
+            # ✅ Assign extracted data back into ctx.state
+            ctx.state.raw_response = response_text
+            ctx.state.field_order = self.template.field_order
 
             return ParseNode(
                 entity_type=self.template.entity_type,

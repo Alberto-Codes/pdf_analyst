@@ -8,10 +8,11 @@ from base_types import CitedEntity, ExtractionTemplate
 from models import Citation, ExtractionResult
 from nodes.base import BaseNode, End, GraphState
 from nodes.export import ExportNode
+from pydantic_graph import GraphRunContext
 
 
 @dataclass
-class ParseNode(BaseNode[GraphState]):
+class ParseNode(BaseNode):
     """Node that parses the extraction results."""
 
     entity_type: Type
@@ -40,39 +41,41 @@ class ParseNode(BaseNode[GraphState]):
             source_document=source_document,
         )
 
-    async def run(self, state: GraphState) -> ExportNode | End[ExtractionResult]:
+    async def run(
+        self, ctx: GraphRunContext[GraphState]
+    ) -> ExportNode | End[ExtractionResult]:
         try:
-            # Load and parse JSON response
-            result = json.loads(state.raw_response)
+
+            result = json.loads(ctx.state.raw_response)
             entity_class = self.entity_type.with_mapping(self.template.field_mapping)
 
-            # Get the correct key based on template type
             key = "employeecount" if self.template.is_singular else "officers"
 
             if self.template.is_singular:
-                # Handle single entity
+
                 entity_data = result[key]
                 entities = [
-                    self._create_entity(entity_data, entity_class, state.document_path)
+                    self._create_entity(
+                        entity_data, entity_class, ctx.state.document_path
+                    )
                 ]
             else:
-                # Handle list of entities
+
                 entities = [
-                    self._create_entity(entity_data, entity_class, state.document_path)
+                    self._create_entity(
+                        entity_data, entity_class, ctx.state.document_path
+                    )
                     for entity_data in result.get(key, [])
                 ]
 
-            # Create extraction result
             extraction_result = ExtractionResult(
                 entities=entities,
-                raw_response=state.raw_response,
-                extraction_timestamp=state.extracted_at,
+                raw_response=ctx.state.raw_response,
+                extraction_timestamp=ctx.state.extracted_at,
             )
-            state.extraction_result = extraction_result
+            ctx.state.extraction_result = extraction_result
 
-            state.field_order = (
-                self.template.field_order
-            )  # Ensure field order is stored
+            ctx.state.field_order = self.template.field_order
 
             return ExportNode()
         except Exception as e:
