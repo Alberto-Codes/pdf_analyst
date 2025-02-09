@@ -1,4 +1,5 @@
 from config import GeminiConfig
+from document_config import DocumentConfig
 from entities.officer import OFFICER_TEMPLATE
 from graph import Graph
 from graph_nodes import ExportNode, GenericExtractNode, GraphState, ParseNode
@@ -6,14 +7,19 @@ from graph_nodes import ExportNode, GenericExtractNode, GraphState, ParseNode
 
 async def main():
     config = GeminiConfig()
-    state = GraphState(pdf_path="data/10k.pdf", output_path="data/officers_export.csv")
+    doc_config = DocumentConfig(
+        mime_type="application/pdf", stream_response=True, encoding="utf-8"
+    )
+
+    state = GraphState(
+        document_path="data/10k.pdf",
+        document_config=doc_config,
+        output_path="data/officers_export.csv",
+    )
 
     extract_node = GenericExtractNode(
         config=config,
         template=OFFICER_TEMPLATE,
-        mime_type="application/pdf",
-        stream_response=True,
-        encoding="utf-8",
     )
 
     workflow = Graph(nodes={GenericExtractNode, ParseNode, ExportNode})

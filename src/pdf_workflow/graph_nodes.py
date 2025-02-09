@@ -8,6 +8,7 @@ from typing import Generic, Type, TypeVar
 
 from base_types import CitedEntity, ExtractionTemplate
 from config import GeminiConfig
+from document_config import DocumentConfig
 from google.genai import types
 from models import Citation, ExtractionResult
 from prompts import PromptTemplate
@@ -21,11 +22,12 @@ RunEndT = TypeVar("RunEndT")
 class GraphState:
     """Holds the state of the extraction process."""
 
-    pdf_path: str
+    document_path: str  # Changed from pdf_path
+    document_config: DocumentConfig
     raw_response: str = ""
     extracted_at: datetime = datetime.now(timezone.utc)
     extraction_result: ExtractionResult | None = None
-    output_path: str = "data/officers_export.csv"
+    output_path: str = "data/extraction_export.csv"
 
 
 @dataclass
@@ -49,18 +51,16 @@ class GenericExtractNode(BaseNode[GraphState]):
 
     config: GeminiConfig
     template: ExtractionTemplate
-    mime_type: str = "application/pdf"  # Make file type configurable
-    stream_response: bool = True  # Allow configuring whether to stream
-    encoding: str = "utf-8"  # Make encoding configurable
 
     async def run(self, state: GraphState) -> ParseNode | End[ExtractionResult]:
         try:
             encoded_file = encode_file(
-                state.pdf_path
-            )  # This function name is still PDF-specific
+                state.document_path, encoding=state.document_config.encoding
+            )
+
             document = types.Part.from_bytes(
                 data=encoded_file,
-                mime_type=self.mime_type,
+                mime_type=state.document_config.mime_type,
             )
 
             contents = PromptTemplate.create_extraction_content(
@@ -68,7 +68,7 @@ class GenericExtractNode(BaseNode[GraphState]):
             )
 
             response_text = ""
-            if self.stream_response:
+            if state.document_config.stream_response:
                 for chunk in self.config.client.models.generate_content_stream(
                     model=self.config.model,
                     contents=contents,
@@ -121,7 +121,7 @@ class ParseNode(BaseNode[GraphState]):
                 entity = self.entity_type(
                     **entity_dict,
                     citations=citations,
-                    source_document=state.pdf_path,
+                    source_document=state.document_path,
                 )
                 entities.append(entity)
 
@@ -145,38 +145,39 @@ class ExportNode(BaseNode[GraphState]):
             if not state.extraction_result or not state.extraction_result.entities:
                 raise ValueError("No entities data to export")
 
-            # Get the first entity to determine the type
             first_entity = state.extraction_result.entities[0]
             if not isinstance(first_entity, CitedEntity):
                 raise TypeError("Entities must inherit from CitedEntity")
 
-            # Get field names from the entity type and capitalize them
-            entity_fields = [
-                field.name.capitalize()
-                for field in fields(type(first_entity))
-                if field.name not in fields(CitedEntity)
-            ]
+            # Use the entity's field_order if available, otherwise fall back to csv_field_mapping
+            entity_class = type(first_entity)
+            fieldnames = getattr(entity_class, "field_order", None)
 
-            # Combine with base CitedEntity CSV fields
-            base_fields = [
-                "Source_Document",
-                "Extracted_At",
-                "Page_Numbers",
-                "Text_Snippets",
-                "Average_Confidence",
-            ]
-            fieldnames = entity_fields + base_fields
-
-            # Get CSV-friendly rows
-            rows = [entity.to_csv_row() for entity in state.extraction_result.entities]
+            if not fieldnames:
+                # Fall back to previous behavior if field_order not defined
+                fieldnames = []
+                seen_fields = set()
+                for field_name, mapped_name in entity_class.csv_field_mapping.items():
+                    if isinstance(mapped_name, str) and mapped_name not in seen_fields:
+                        fieldnames.append(mapped_name)
+                        seen_fields.add(mapped_name)
+                    elif isinstance(mapped_name, list):
+                        for name in mapped_name:
+                            if name not in seen_fields:
+                                fieldnames.append(name)
+                                seen_fields.add(name)
 
             # Write to CSV
             with open(state.output_path, "w", newline="", encoding="utf-8") as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()
-                writer.writerows(rows)
+                writer.writerows(
+                    entity.to_csv_row() for entity in state.extraction_result.entities
+                )
 
-            print(f"\nExported {len(rows)} entities to: {state.output_path}")
+            print(
+                f"\nExported {len(state.extraction_result.entities)} entities to: {state.output_path}"
+            )
             return End(state.extraction_result)
         except Exception as e:
             raise Exception(f"Error in CSV export: {str(e)}")

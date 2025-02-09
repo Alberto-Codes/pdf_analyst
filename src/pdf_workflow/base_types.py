@@ -15,6 +15,24 @@ class CitedEntity(Generic[T]):
     extracted_at: datetime = datetime.now(timezone.utc)
     source_document: str = ""
 
+    # Class variable defining how fields map to CSV columns
+    csv_field_mapping = {
+        "source_document": "Source_Document",
+        "extracted_at": "Extracted_At",
+        "citations": ["Page_Numbers", "Text_Snippets", "Average_Confidence"],
+    }
+
+    @classmethod
+    def get_csv_fields(cls) -> List[str]:
+        """Get all CSV field names in the correct order."""
+        fields = []
+        for field_mapping in cls.csv_field_mapping.values():
+            if isinstance(field_mapping, list):
+                fields.extend(field_mapping)
+            else:
+                fields.append(field_mapping)
+        return fields
+
     def to_csv_row(self) -> dict:
         """Convert entity data to a CSV-friendly row format."""
         pages = ",".join(str(c.page_number) for c in self.citations)
@@ -25,14 +43,14 @@ class CitedEntity(Generic[T]):
             else 0
         )
 
-        base_data = {
+        # Map the raw fields to CSV fields using the mapping
+        return {
             "Source_Document": self.source_document,
             "Extracted_At": self.extracted_at.isoformat(),
             "Page_Numbers": pages,
             "Text_Snippets": snippets,
             "Average_Confidence": f"{avg_confidence:.2f}",
         }
-        return base_data
 
 
 @dataclass
