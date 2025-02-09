@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import dataclass, fields
 from datetime import datetime, timezone
-from typing import Generic, Type, TypeVar
+from typing import Generic, List, Type, TypeVar
 
 from base_types import CitedEntity, ExtractionTemplate
 from config import GeminiConfig
@@ -22,12 +22,13 @@ RunEndT = TypeVar("RunEndT")
 class GraphState:
     """Holds the state of the extraction process."""
 
-    document_path: str  # Changed from pdf_path
+    document_path: str
     document_config: DocumentConfig
     raw_response: str = ""
     extracted_at: datetime = datetime.now(timezone.utc)
     extraction_result: ExtractionResult | None = None
     output_path: str = "data/extraction_export.csv"
+    field_order: List[str] | None = None  # Added field_order to state
 
 
 @dataclass
@@ -97,46 +98,65 @@ class GenericExtractNode(BaseNode[GraphState]):
 class ParseNode(BaseNode[GraphState]):
     """Node that parses the extraction results."""
 
-    entity_type: Type  # The type of entity to parse (e.g., Officer)
-    entity_key: str  # The key in the JSON response (e.g., "officers")
-    template: ExtractionTemplate  # Add template parameter
+    entity_type: Type
+    entity_key: str
+    template: ExtractionTemplate
+
+    def _parse_citations(self, citations_data: List[dict]) -> List[Citation]:
+        """Parse citation data into Citation objects."""
+        return [
+            Citation(
+                page_number=cite["page_number"],
+                text_snippet=cite["text_snippet"],
+                confidence_score=cite["confidence_score"],
+            )
+            for cite in citations_data
+        ]
+
+    def _create_entity(
+        self, entity_data: dict, entity_class: Type, source_document: str
+    ) -> Any:
+        """Create an entity instance from data."""
+        citations = self._parse_citations(entity_data.pop("citations"))
+        return entity_class(
+            **entity_data,
+            citations=citations,
+            source_document=source_document,
+        )
 
     async def run(self, state: GraphState) -> ExportNode | End[ExtractionResult]:
         try:
+            # Load and parse JSON response
             result = json.loads(state.raw_response)
-            entities = []
-
-            # Apply field mapping from template
             entity_class = self.entity_type.with_mapping(self.template.field_mapping)
 
-            for entity_data in result[self.entity_key]:
-                citations = [
-                    Citation(
-                        page_number=cite["page_number"],
-                        text_snippet=cite["text_snippet"],
-                        confidence_score=cite["confidence_score"],
-                    )
-                    for cite in entity_data["citations"]
+            # Get the correct key based on template type
+            key = "employeecount" if self.template.is_singular else "officers"
+
+            if self.template.is_singular:
+                # Handle single entity
+                entity_data = result[key]
+                entities = [
+                    self._create_entity(entity_data, entity_class, state.document_path)
+                ]
+            else:
+                # Handle list of entities
+                entities = [
+                    self._create_entity(entity_data, entity_class, state.document_path)
+                    for entity_data in result[key]
                 ]
 
-                # Remove citations from entity_data since we handle it separately
-                entity_dict = {k: v for k, v in entity_data.items() if k != "citations"}
-
-                # Create the entity instance with citations and source document
-                entity = entity_class(
-                    **entity_dict,
-                    citations=citations,
-                    source_document=state.document_path,
-                )
-                entities.append(entity)
-
+            # Create extraction result
             extraction_result = ExtractionResult(
                 entities=entities,
                 raw_response=state.raw_response,
                 extraction_timestamp=state.extracted_at,
             )
             state.extraction_result = extraction_result
-            return ExportNode(field_order=self.template.field_order)
+
+            # Store field order in state instead of passing to ExportNode
+            state.field_order = self.template.field_order
+            return ExportNode()
         except Exception as e:
             raise Exception(f"Error in parsing: {str(e)}")
 
@@ -144,8 +164,6 @@ class ParseNode(BaseNode[GraphState]):
 @dataclass
 class ExportNode(BaseNode[GraphState]):
     """Node that handles CSV export for any type of CitedEntity."""
-
-    field_order: List[str] = None  # Add field order parameter
 
     async def run(self, state: GraphState) -> End[ExtractionResult]:
         try:
@@ -156,11 +174,8 @@ class ExportNode(BaseNode[GraphState]):
             if not isinstance(first_entity, CitedEntity):
                 raise TypeError("Entities must inherit from CitedEntity")
 
-            # Use provided field order or get from entity
-            fieldnames = self.field_order or getattr(
-                type(first_entity), "field_order", None
-            )
-
+            # Get field order from state
+            fieldnames = getattr(state, "field_order", None)
             if not fieldnames:
                 # Fall back to default field order from CitedEntity
                 fieldnames = first_entity.get_csv_fields()

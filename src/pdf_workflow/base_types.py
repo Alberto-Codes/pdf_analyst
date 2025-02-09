@@ -65,19 +65,17 @@ class ExtractionTemplate:
     entity_name: str
     entity_type: Type[CitedEntity]
     fields: List[str]
-    field_order: List[str] = None  # New field for ordering
-    field_mapping: dict = None  # New field for CSV mapping
+    field_order: List[str] = None
+    field_mapping: dict = None
+    is_singular: bool = False  # New field to indicate single-value entities
 
     def __post_init__(self):
         """Initialize field order and mapping if not provided."""
         if self.field_mapping is None:
-            # Create default mapping from fields
             self.field_mapping = {field: field.title() for field in self.fields}
-            # Add base CitedEntity mappings
             self.field_mapping.update(self.entity_type.csv_field_mapping)
 
         if self.field_order is None:
-            # Default order: entity-specific fields first, then base fields
             base_fields = self.entity_type.get_csv_fields()
             entity_fields = [self.field_mapping[f] for f in self.fields]
             self.field_order = entity_fields + [
@@ -85,13 +83,16 @@ class ExtractionTemplate:
             ]
 
     def get_prompt(self) -> str:
+        """Generate appropriate prompt based on entity type."""
         fields_json = ", ".join(f'"{field}": "string"' for field in self.fields)
-        return f"""
-        Extract {self.entity_name} information and provide detailed citations.
-        Format the response as a JSON object with the following structure:
-        {{
-            "{self.entity_name.lower()}s": [
-                {{
+
+        if self.is_singular:
+            return f"""
+            Extract {self.entity_name} information and provide detailed citation.
+            Look for mentions of total employee count, workforce size, or number of employees.
+            Format the response as a JSON object with the following structure:
+            {{
+                "{self.entity_name.lower()}": {{
                     {fields_json},
                     "citations": [
                         {{
@@ -101,13 +102,38 @@ class ExtractionTemplate:
                         }}
                     ]
                 }}
-            ]
-        }}
-        
-        For each citation:
-        - Include the page number where the information was found
-        - Include a brief text snippet from the page (max 100 chars)
-        - Provide a confidence score (0.0-1.0) for the citation
-        
-        Use empty string '' for missing values in any field.
-        """
+            }}
+            
+            For the citation:
+            - Include the page number where the information was found
+            - Include a brief text snippet from the page (max 100 chars)
+            - Provide a confidence score (0.0-1.0) for the citation
+            
+            Use empty string '' for missing values in any field.
+            """
+        else:
+            return f"""
+            Extract {self.entity_name} information and provide detailed citations.
+            Format the response as a JSON object with the following structure:
+            {{
+                "{self.entity_name.lower()}s": [
+                    {{
+                        {fields_json},
+                        "citations": [
+                            {{
+                                "page_number": number,
+                                "text_snippet": "string",
+                                "confidence_score": number
+                            }}
+                        ]
+                    }}
+                ]
+            }}
+            
+            For each citation:
+            - Include the page number where the information was found
+            - Include a brief text snippet from the page (max 100 chars)
+            - Provide a confidence score (0.0-1.0) for the citation
+            
+            Use empty string '' for missing values in any field.
+            """

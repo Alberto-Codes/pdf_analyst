@@ -1,6 +1,7 @@
 from batch_processor import BatchProcessor
 from config import GeminiConfig
 from document_config import DocumentConfig
+from entities.employee import EMPLOYEE_TEMPLATE  # New import
 from entities.officer import OFFICER_TEMPLATE
 
 
@@ -10,25 +11,44 @@ async def main():
         mime_type="application/pdf", stream_response=True, encoding="utf-8"
     )
 
-    # Initialize batch processor
-    processor = BatchProcessor(
+    # Process officers
+    officer_processor = BatchProcessor(
         config=config,
         doc_config=doc_config,
         template=OFFICER_TEMPLATE,
         output_dir="data/officer_exports",
+        max_concurrent=3,
     )
 
-    # List of PDFs to process
-    documents = ["data/10k_2023.pdf", "data/10k_2022.pdf", "data/10k_2021.pdf"]
+    # Process employee counts
+    employee_processor = BatchProcessor(
+        config=config,
+        doc_config=doc_config,
+        template=EMPLOYEE_TEMPLATE,  # No need to modify the template
+        output_dir="data/employee_exports",
+        max_concurrent=3,
+    )
 
-    # Process all documents
-    results = await processor.process_documents(documents)
+    documents = [
+        "data/10k_2023.pdf",
+        "data/10k_2022.pdf",
+        "data/10k_2021.pdf",
+        "data/10k_2020.pdf",
+        "data/10k_2019.pdf",
+    ]
 
-    # Print summary
-    print("\nBatch Processing Summary:")
-    print(f"Total documents processed: {len(results)}")
-    total_entities = sum(len(result.entities) for result in results)
-    print(f"Total entities extracted: {total_entities}")
+    # Process both entity types
+    print("\nProcessing Officers...")
+    officer_results = await officer_processor.process_documents(documents)
+
+    print("\nProcessing Employee Counts...")
+    employee_results = await employee_processor.process_documents(documents)
+
+    # Print combined summary
+    print("\nFinal Processing Summary:")
+    print(f"Documents processed: {len(documents)}")
+    print(f"Total officers found: {sum(len(r.entities) for r in officer_results)}")
+    print(f"Employee counts extracted: {len(employee_results)}")
 
 
 if __name__ == "__main__":
