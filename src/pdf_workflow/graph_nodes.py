@@ -87,6 +87,7 @@ class GenericExtractNode(BaseNode[GraphState]):
             return ParseNode(
                 entity_type=self.template.entity_type,
                 entity_key=self.template.entity_name.lower() + "s",
+                template=self.template,
             )
         except Exception as e:
             raise Exception(f"Error in extraction: {str(e)}")
@@ -98,11 +99,15 @@ class ParseNode(BaseNode[GraphState]):
 
     entity_type: Type  # The type of entity to parse (e.g., Officer)
     entity_key: str  # The key in the JSON response (e.g., "officers")
+    template: ExtractionTemplate  # Add template parameter
 
     async def run(self, state: GraphState) -> ExportNode | End[ExtractionResult]:
         try:
             result = json.loads(state.raw_response)
             entities = []
+
+            # Apply field mapping from template
+            entity_class = self.entity_type.with_mapping(self.template.field_mapping)
 
             for entity_data in result[self.entity_key]:
                 citations = [
@@ -118,7 +123,7 @@ class ParseNode(BaseNode[GraphState]):
                 entity_dict = {k: v for k, v in entity_data.items() if k != "citations"}
 
                 # Create the entity instance with citations and source document
-                entity = self.entity_type(
+                entity = entity_class(
                     **entity_dict,
                     citations=citations,
                     source_document=state.document_path,
@@ -126,12 +131,12 @@ class ParseNode(BaseNode[GraphState]):
                 entities.append(entity)
 
             extraction_result = ExtractionResult(
-                entities=entities,  # This field name should probably be made generic too
+                entities=entities,
                 raw_response=state.raw_response,
                 extraction_timestamp=state.extracted_at,
             )
             state.extraction_result = extraction_result
-            return ExportNode()
+            return ExportNode(field_order=self.template.field_order)
         except Exception as e:
             raise Exception(f"Error in parsing: {str(e)}")
 
@@ -139,6 +144,8 @@ class ParseNode(BaseNode[GraphState]):
 @dataclass
 class ExportNode(BaseNode[GraphState]):
     """Node that handles CSV export for any type of CitedEntity."""
+
+    field_order: List[str] = None  # Add field order parameter
 
     async def run(self, state: GraphState) -> End[ExtractionResult]:
         try:
@@ -149,23 +156,14 @@ class ExportNode(BaseNode[GraphState]):
             if not isinstance(first_entity, CitedEntity):
                 raise TypeError("Entities must inherit from CitedEntity")
 
-            # Use the entity's field_order if available, otherwise fall back to csv_field_mapping
-            entity_class = type(first_entity)
-            fieldnames = getattr(entity_class, "field_order", None)
+            # Use provided field order or get from entity
+            fieldnames = self.field_order or getattr(
+                type(first_entity), "field_order", None
+            )
 
             if not fieldnames:
-                # Fall back to previous behavior if field_order not defined
-                fieldnames = []
-                seen_fields = set()
-                for field_name, mapped_name in entity_class.csv_field_mapping.items():
-                    if isinstance(mapped_name, str) and mapped_name not in seen_fields:
-                        fieldnames.append(mapped_name)
-                        seen_fields.add(mapped_name)
-                    elif isinstance(mapped_name, list):
-                        for name in mapped_name:
-                            if name not in seen_fields:
-                                fieldnames.append(name)
-                                seen_fields.add(name)
+                # Fall back to default field order from CitedEntity
+                fieldnames = first_entity.get_csv_fields()
 
             # Write to CSV
             with open(state.output_path, "w", newline="", encoding="utf-8") as csvfile:

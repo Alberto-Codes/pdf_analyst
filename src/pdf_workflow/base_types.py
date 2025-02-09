@@ -15,26 +15,16 @@ class CitedEntity(Generic[T]):
     extracted_at: datetime = datetime.now(timezone.utc)
     source_document: str = ""
 
-    # Class variable defining how fields map to CSV columns
+    # Base citation field mapping
     csv_field_mapping = {
         "source_document": "Source_Document",
         "extracted_at": "Extracted_At",
         "citations": ["Page_Numbers", "Text_Snippets", "Average_Confidence"],
     }
 
-    @classmethod
-    def get_csv_fields(cls) -> List[str]:
-        """Get all CSV field names in the correct order."""
-        fields = []
-        for field_mapping in cls.csv_field_mapping.values():
-            if isinstance(field_mapping, list):
-                fields.extend(field_mapping)
-            else:
-                fields.append(field_mapping)
-        return fields
-
     def to_csv_row(self) -> dict:
         """Convert entity data to a CSV-friendly row format."""
+        # Handle citation fields
         pages = ",".join(str(c.page_number) for c in self.citations)
         snippets = "; ".join(c.text_snippet for c in self.citations)
         avg_confidence = (
@@ -43,8 +33,8 @@ class CitedEntity(Generic[T]):
             else 0
         )
 
-        # Map the raw fields to CSV fields using the mapping
-        return {
+        # Start with base fields
+        row = {
             "Source_Document": self.source_document,
             "Extracted_At": self.extracted_at.isoformat(),
             "Page_Numbers": pages,
@@ -52,14 +42,47 @@ class CitedEntity(Generic[T]):
             "Average_Confidence": f"{avg_confidence:.2f}",
         }
 
+        # Add entity-specific fields using field mapping from instance
+        if hasattr(self, "_field_mapping"):
+            for field_name, csv_name in self._field_mapping.items():
+                if hasattr(self, field_name):
+                    row[csv_name] = getattr(self, field_name)
+
+        return row
+
+    @classmethod
+    def with_mapping(cls, field_mapping: dict = None):
+        """Create a new instance with custom field mapping."""
+        if field_mapping:
+            cls._field_mapping = field_mapping
+        return cls
+
 
 @dataclass
 class ExtractionTemplate:
     """Base template for extraction prompts."""
 
     entity_name: str
-    entity_type: Type[CitedEntity]  # Add this line to specify the entity class type
+    entity_type: Type[CitedEntity]
     fields: List[str]
+    field_order: List[str] = None  # New field for ordering
+    field_mapping: dict = None  # New field for CSV mapping
+
+    def __post_init__(self):
+        """Initialize field order and mapping if not provided."""
+        if self.field_mapping is None:
+            # Create default mapping from fields
+            self.field_mapping = {field: field.title() for field in self.fields}
+            # Add base CitedEntity mappings
+            self.field_mapping.update(self.entity_type.csv_field_mapping)
+
+        if self.field_order is None:
+            # Default order: entity-specific fields first, then base fields
+            base_fields = self.entity_type.get_csv_fields()
+            entity_fields = [self.field_mapping[f] for f in self.fields]
+            self.field_order = entity_fields + [
+                f for f in base_fields if f not in entity_fields
+            ]
 
     def get_prompt(self) -> str:
         fields_json = ", ".join(f'"{field}": "string"' for field in self.fields)
