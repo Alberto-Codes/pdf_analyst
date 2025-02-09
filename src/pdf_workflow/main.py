@@ -1,7 +1,9 @@
+import asyncio
+
 from batch_processor import BatchProcessor
 from config import GeminiConfig
 from document_config import DocumentConfig
-from entities.employee import EMPLOYEE_TEMPLATE  # New import
+from entities.employee import EMPLOYEE_TEMPLATE
 from entities.officer import OFFICER_TEMPLATE
 
 
@@ -24,7 +26,7 @@ async def main():
     employee_processor = BatchProcessor(
         config=config,
         doc_config=doc_config,
-        template=EMPLOYEE_TEMPLATE,  # No need to modify the template
+        template=EMPLOYEE_TEMPLATE,
         output_dir="data/employee_exports",
         max_concurrent=3,
     )
@@ -49,6 +51,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    import asyncio
-
     asyncio.run(main())
