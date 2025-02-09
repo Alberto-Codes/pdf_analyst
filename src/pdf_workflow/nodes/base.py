@@ -7,7 +7,6 @@ from uuid import uuid4
 
 from document_config import DocumentConfig
 from models import ExtractionResult
-from pydantic_graph import GraphRunContext
 
 
 @dataclass
@@ -22,18 +21,3 @@ class GraphState:
     extraction_result: Optional[ExtractionResult] = None
     output_path: str = "data/extraction_export.csv"
     field_order: Optional[List[str]] = None
-
-
-@dataclass
-class End:
-    """Signals the end of graph execution."""
-
-    data: ExtractionResult
-
-
-@dataclass
-class BaseNode:
-    """Base class for all nodes in the extraction workflow."""
-
-    async def run(self, ctx: GraphRunContext[GraphState]) -> BaseNode | End:
-        raise NotImplementedError

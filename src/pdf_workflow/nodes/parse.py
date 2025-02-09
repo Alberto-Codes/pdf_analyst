@@ -6,9 +6,9 @@ from typing import List, Type
 
 from base_types import CitedEntity, ExtractionTemplate
 from models import Citation, ExtractionResult
-from nodes.base import BaseNode, End, GraphState
+from nodes.base import GraphState
 from nodes.export import ExportNode
-from pydantic_graph import GraphRunContext
+from pydantic_graph import BaseNode, End, GraphRunContext
 
 
 @dataclass

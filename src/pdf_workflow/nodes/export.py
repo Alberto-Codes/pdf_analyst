@@ -5,8 +5,8 @@ from dataclasses import dataclass
 
 from base_types import CitedEntity
 from models import ExtractionResult
-from nodes.base import BaseNode, End, GraphState
-from pydantic_graph import GraphRunContext
+from nodes.base import GraphState
+from pydantic_graph import BaseNode, End, GraphRunContext
 
 
 @dataclass
