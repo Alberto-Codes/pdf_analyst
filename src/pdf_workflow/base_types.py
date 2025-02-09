@@ -40,6 +40,7 @@ class ExtractionTemplate:
     """Base template for extraction prompts."""
 
     entity_name: str
+    entity_type: Type[CitedEntity]  # Add this line to specify the entity class type
     fields: List[str]
 
     def get_prompt(self) -> str:

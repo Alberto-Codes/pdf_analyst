@@ -1,26 +1,26 @@
 import base64
-from pathlib import Path
 
 
-def encode_pdf(pdf_path: str) -> str:
+def encode_file(file_path: str, encoding: str = "utf-8") -> str:
     """
-    Read and encode a PDF file to base64.
+    Read and encode a file to base64.
 
     Args:
-        pdf_path (str): Path to the PDF file
+        file_path (str): Path to the file
+        encoding (str): Encoding to use for the result
 
     Returns:
-        str: Base64 encoded PDF content
+        str: Base64 encoded content
 
     Raises:
-        FileNotFoundError: If PDF file is not found
+        FileNotFoundError: If file is not found
         IOError: If there's an error reading the file
     """
     try:
-        with open(pdf_path, "rb") as file:
-            pdf_data = file.read()
-            return base64.b64encode(pdf_data).decode("utf-8")
+        with open(file_path, "rb") as file:
+            data = file.read()
+            return base64.b64encode(data).decode(encoding)
     except FileNotFoundError:
-        raise FileNotFoundError(f"PDF file not found at path: {pdf_path}")
+        raise FileNotFoundError(f"File not found at path: {file_path}")
     except IOError as e:
-        raise IOError(f"Error reading PDF file: {str(e)}")
+        raise IOError(f"Error reading file: {str(e)}")

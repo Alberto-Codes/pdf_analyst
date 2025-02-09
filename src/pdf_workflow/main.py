@@ -8,12 +8,18 @@ async def main():
     config = GeminiConfig()
     state = GraphState(pdf_path="data/10k.pdf", output_path="data/officers_export.csv")
 
-    workflow = Graph(nodes={GenericExtractNode, ParseNode, ExportNode})
-    result, history = await workflow.run(
-        GenericExtractNode(config=config, template=OFFICER_TEMPLATE), state
+    extract_node = GenericExtractNode(
+        config=config,
+        template=OFFICER_TEMPLATE,
+        mime_type="application/pdf",
+        stream_response=True,
+        encoding="utf-8",
     )
 
-    print(f"Processed {len(result.entities)} officers")
+    workflow = Graph(nodes={GenericExtractNode, ParseNode, ExportNode})
+    result, history = await workflow.run(extract_node, state)
+
+    print(f"Processed {len(result.entities)} entities")
     for step in history:
         print(f"Executed: {step.__class__.__name__}")
 

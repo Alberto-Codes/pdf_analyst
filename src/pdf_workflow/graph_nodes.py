@@ -12,7 +12,7 @@ from entities.officer import Officer
 from google.genai import types
 from models import Citation, ExtractionResult
 from prompts import PromptTemplate
-from utils import encode_pdf
+from utils import encode_file
 
 StateT = TypeVar("StateT")
 RunEndT = TypeVar("RunEndT")
@@ -50,13 +50,18 @@ class GenericExtractNode(BaseNode[GraphState]):
 
     config: GeminiConfig
     template: ExtractionTemplate
+    mime_type: str = "application/pdf"  # Make file type configurable
+    stream_response: bool = True  # Allow configuring whether to stream
+    encoding: str = "utf-8"  # Make encoding configurable
 
     async def run(self, state: GraphState) -> ParseNode | End[ExtractionResult]:
         try:
-            encoded_pdf = encode_pdf(state.pdf_path)
+            encoded_file = encode_file(
+                state.pdf_path
+            )  # This function name is still PDF-specific
             document = types.Part.from_bytes(
-                data=encoded_pdf,
-                mime_type="application/pdf",
+                data=encoded_file,
+                mime_type=self.mime_type,
             )
 
             contents = PromptTemplate.create_extraction_content(
@@ -64,15 +69,26 @@ class GenericExtractNode(BaseNode[GraphState]):
             )
 
             response_text = ""
-            for chunk in self.config.client.models.generate_content_stream(
-                model=self.config.model,
-                contents=contents,
-                config=self.config.generate_config,
-            ):
-                response_text += chunk.text
+            if self.stream_response:
+                for chunk in self.config.client.models.generate_content_stream(
+                    model=self.config.model,
+                    contents=contents,
+                    config=self.config.generate_config,
+                ):
+                    response_text += chunk.text
+            else:
+                response = self.config.client.models.generate_content(
+                    model=self.config.model,
+                    contents=contents,
+                    config=self.config.generate_config,
+                )
+                response_text = response.text
 
             state.raw_response = response_text
-            return ParseNode(entity_type=Officer, entity_key="officers")
+            return ParseNode(
+                entity_type=self.template.entity_type,
+                entity_key=self.template.entity_name.lower() + "s",
+            )
         except Exception as e:
             raise Exception(f"Error in extraction: {str(e)}")
 
@@ -128,12 +144,10 @@ class ExportNode(BaseNode[GraphState]):
     async def run(self, state: GraphState) -> End[ExtractionResult]:
         try:
             if not state.extraction_result or not state.extraction_result.entities:
-                raise ValueError("No officers data to export")
+                raise ValueError("No entities data to export")
 
             # Get CSV-friendly rows
-            rows = [
-                officer.to_csv_row() for officer in state.extraction_result.entities
-            ]
+            rows = [entity.to_csv_row() for entity in state.extraction_result.entities]
 
             # Write to CSV
             with open(state.output_path, "w", newline="", encoding="utf-8") as csvfile:
