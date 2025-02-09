@@ -85,6 +85,10 @@ class GenericExtractNode(BaseNode[GraphState]):
                 response_text = response.text
 
             state.raw_response = response_text
+            state.field_order = (
+                self.template.field_order
+            )  # ✅ Store field order in state
+
             return ParseNode(
                 entity_type=self.template.entity_type,
                 entity_key=self.template.entity_name.lower() + "s",
@@ -115,9 +119,9 @@ class ParseNode(BaseNode[GraphState]):
 
     def _create_entity(
         self, entity_data: dict, entity_class: Type, source_document: str
-    ) -> Any:
-        """Create an entity instance from data."""
-        citations = self._parse_citations(entity_data.pop("citations"))
+    ) -> CitedEntity:
+        """Create an entity instance from JSON extraction output."""
+        citations = self._parse_citations(entity_data.pop("citations", []))
         return entity_class(
             **entity_data,
             citations=citations,
@@ -143,7 +147,7 @@ class ParseNode(BaseNode[GraphState]):
                 # Handle list of entities
                 entities = [
                     self._create_entity(entity_data, entity_class, state.document_path)
-                    for entity_data in result[key]
+                    for entity_data in result.get(key, [])
                 ]
 
             # Create extraction result
@@ -154,8 +158,10 @@ class ParseNode(BaseNode[GraphState]):
             )
             state.extraction_result = extraction_result
 
-            # Store field order in state instead of passing to ExportNode
-            state.field_order = self.template.field_order
+            state.field_order = (
+                self.template.field_order
+            )  # Ensure field order is stored
+
             return ExportNode()
         except Exception as e:
             raise Exception(f"Error in parsing: {str(e)}")
@@ -174,13 +180,10 @@ class ExportNode(BaseNode[GraphState]):
             if not isinstance(first_entity, CitedEntity):
                 raise TypeError("Entities must inherit from CitedEntity")
 
-            # Get field order from state
-            fieldnames = getattr(state, "field_order", None)
+            fieldnames = state.field_order  # ✅ Use stored field order
             if not fieldnames:
-                # Fall back to default field order from CitedEntity
                 fieldnames = first_entity.get_csv_fields()
 
-            # Write to CSV
             with open(state.output_path, "w", newline="", encoding="utf-8") as csvfile:
                 writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
                 writer.writeheader()

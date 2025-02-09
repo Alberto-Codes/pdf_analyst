@@ -59,7 +59,7 @@ class BatchProcessor:
             try:
                 if not doc_path:
                     raise ValueError("Invalid document path provided.")
-                
+
                 output_path = self._get_output_path(doc_path)
                 if not output_path:
                     raise ValueError(f"Failed to determine output path for {doc_path}")
