@@ -1,4 +1,4 @@
-from typing import Generic, List, Set, Tuple, Type, TypeVar
+from typing import Dict, Generic, List, Set, Tuple, Type, TypeVar
 
 from graph_nodes import BaseNode, End, GraphState
 
@@ -8,8 +8,15 @@ T = TypeVar("T")
 class Graph(Generic[T]):
     """Simple graph implementation for workflow execution."""
 
-    def __init__(self, nodes: Set[Type[BaseNode[GraphState]]]):
+    def __init__(self, nodes: Dict[str, Type[BaseNode[GraphState]]]):
+        """Nodes should be passed as a dictionary with explicit names."""
         self.nodes = nodes
+
+    def get_node(self, node_name: str) -> Type[BaseNode[GraphState]]:
+        """Retrieve a node by its name, enforcing structured workflow."""
+        if node_name not in self.nodes:
+            raise ValueError(f"Node '{node_name}' not found in the workflow.")
+        return self.nodes[node_name]
 
     async def run(
         self, start_node: BaseNode[GraphState], state: GraphState

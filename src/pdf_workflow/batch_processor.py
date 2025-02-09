@@ -21,14 +21,20 @@ class BatchProcessor:
     doc_config: DocumentConfig
     template: ExtractionTemplate
     output_dir: str = "data/exports"
-    max_concurrent: int = field(default=5)  # Increased from 3 to 5
-    chunk_size: int = field(default=3)  # Process documents in chunks
+    max_concurrent: int = field(default=5)
+    chunk_size: int = field(default=3)
 
     def __post_init__(self):
         """Ensure output directory exists and initialize resources."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
-        self.workflow = Graph(nodes={GenericExtractNode, ParseNode, ExportNode})
+        self.workflow = Graph(
+            nodes={
+                "extract": GenericExtractNode,
+                "parse": ParseNode,
+                "export": ExportNode,
+            }
+        )
         self.thread_pool = ThreadPoolExecutor(max_workers=self.max_concurrent)
 
     def _get_output_path(self, input_path: str) -> str:
@@ -44,7 +50,6 @@ class BatchProcessor:
             *(self._process_single_document(doc) for doc in chunk)
         )
 
-        # ✅ Ensure every result is correctly structured
         return [
             (doc, result) if isinstance(result, ExtractionResult) else (doc, None)
             for doc, result in results
@@ -84,11 +89,11 @@ class BatchProcessor:
                     ", ".join(step.__class__.__name__ for step in history),
                 )
 
-                return doc_path, result  # ✅ Always return a tuple
+                return doc_path, result
 
             except Exception as e:
                 print(f"Error processing {doc_path}: {str(e)}")
-                return doc_path, None  # ✅ Ensure it's always a tuple
+                return doc_path, None
 
     async def process_documents(
         self, document_paths: List[str]
@@ -103,9 +108,7 @@ class BatchProcessor:
         for i in range(0, len(document_paths), self.chunk_size):
             chunk = document_paths[i : i + self.chunk_size]
             chunk_results = await self._process_chunk(chunk)
-            results.extend(
-                chunk_results
-            )  # ✅ Guaranteed to be a list of (path, result)
+            results.extend(chunk_results)
 
         successful_results = [
             (path, result) for path, result in results if result is not None
