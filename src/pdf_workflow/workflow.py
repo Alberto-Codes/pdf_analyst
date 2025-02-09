@@ -3,7 +3,7 @@ from __future__ import annotations
 import base64
 import json
 
-from google import genai
+from config import GeminiConfig
 from google.api_core import retry
 from google.genai import types
 from models import Citation, ExtractionResult, Officer
@@ -12,42 +12,11 @@ from models import Citation, ExtractionResult, Officer
 class GeminiPDFParser:
     """A class to handle PDF parsing using Google's Gemini AI model."""
 
-    def __init__(
-        self,
-        location: str = "us-central1",
-        model: str = "gemini-2.0-flash-001",
-        temperature: float = 0.7,
-        top_p: float = 0.95,
-        max_tokens: int = 8192,
-    ):
-        self.client = genai.Client(vertexai=True, location=location)
-        self.model = model
-        self.config = self._create_generate_config(temperature, top_p, max_tokens)
-
-    def _create_generate_config(
-        self, temperature: float, top_p: float, max_tokens: int
-    ) -> types.GenerateContentConfig:
-        return types.GenerateContentConfig(
-            temperature=temperature,
-            top_p=top_p,
-            max_output_tokens=max_tokens,
-            response_modalities=["TEXT"],
-            safety_settings=[
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HARASSMENT", threshold="OFF"
-                ),
-            ],
-            response_mime_type="application/json",
-        )
+    def __init__(self, config: GeminiConfig = None):
+        self.config = config or GeminiConfig()
+        self.client = self.config.create_client()
+        self.model = self.config.model
+        self.generate_config = self.config.create_generate_config()
 
     def _encode_pdf(self, pdf_path: str) -> str:
         try:
@@ -109,7 +78,7 @@ class GeminiPDFParser:
             for chunk in self.client.models.generate_content_stream(
                 model=self.model,
                 contents=contents,
-                config=self.config,
+                config=self.generate_config,  # use generate_config instead of self.config
             ):
                 response_text += chunk.text
 
