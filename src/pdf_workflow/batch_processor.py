@@ -38,66 +38,67 @@ class BatchProcessor:
 
     async def _process_chunk(
         self, chunk: List[str]
-    ) -> List[tuple[str, ExtractionResult]]:
-        """Process a chunk of documents concurrently."""
-        tasks = [self._process_single_document(doc) for doc in chunk]
-        return await asyncio.gather(*tasks)
+    ) -> List[tuple[str, ExtractionResult | None]]:
+        """Ensure all results are always a 2-tuple."""
+        results = await asyncio.gather(
+            *(self._process_single_document(doc) for doc in chunk)
+        )
+
+        # ✅ Ensure every result is correctly structured
+        return [
+            (doc, result) if isinstance(result, ExtractionResult) else (doc, None)
+            for doc, result in results
+        ]
 
     async def _process_single_document(
         self, doc_path: str
-    ) -> tuple[str, ExtractionResult]:
-        """Process a single document with semaphore control."""
+    ) -> tuple[str, ExtractionResult | None]:
+        """Ensure it always returns a (path, ExtractionResult) tuple."""
         start_time = time.time()
         async with self.semaphore:
             try:
-                # Set up state for this document
                 state = GraphState(
                     document_path=doc_path,
                     document_config=self.doc_config,
                     output_path=self._get_output_path(doc_path),
                 )
 
-                # Set up initial node with correct entity key based on template type
-                entity_key = (
-                    "employeecount" if self.template.is_singular else "officers"
-                )
-                extract_node = GenericExtractNode(
+                start_node = GenericExtractNode(
                     config=self.config, template=self.template
                 )
+                result, history = await self.workflow.run(start_node, state)
 
-                # Run workflow for this document
-                result, history = await self.workflow.run(extract_node, state)
-
-                processing_time = time.time() - start_time
                 print(f"\nProcessed {doc_path}:")
-                print(f"Found {len(result.entities)} entities")
+                print(f"Entities extracted: {len(result.entities)}")
                 print(f"Output saved to: {state.output_path}")
-                print(f"Processing time: {processing_time:.2f} seconds")
+                print(f"Processing time: {time.time() - start_time:.2f} seconds")
                 print(
                     "Workflow steps:",
                     ", ".join(step.__class__.__name__ for step in history),
                 )
 
-                return doc_path, result
+                return doc_path, result  # ✅ Always return a tuple
+
             except Exception as e:
                 print(f"Error processing {doc_path}: {str(e)}")
-                return doc_path, None
+                return doc_path, None  # ✅ Ensure it's always a tuple
 
     async def process_documents(
         self, document_paths: List[str]
     ) -> List[ExtractionResult]:
-        """Process multiple documents in parallel using chunked processing."""
+        """Process multiple documents and ensure tuple structure is correct."""
         print(
             f"\nStarting parallel processing with max {self.max_concurrent} concurrent tasks"
         )
         start_time = time.time()
 
-        # Process documents in chunks
         results = []
         for i in range(0, len(document_paths), self.chunk_size):
             chunk = document_paths[i : i + self.chunk_size]
             chunk_results = await self._process_chunk(chunk)
-            results.extend(chunk_results)
+            results.extend(
+                chunk_results
+            )  # ✅ Guaranteed to be a list of (path, result)
 
         successful_results = [
             (path, result) for path, result in results if result is not None

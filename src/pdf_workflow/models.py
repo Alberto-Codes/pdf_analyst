@@ -5,26 +5,23 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any, List
 
+from pydantic import BaseModel, Field
 
-@dataclass
-class Citation:
+
+class Citation(BaseModel):
     """Represents a citation from the PDF document."""
 
     page_number: int
     text_snippet: str
     confidence_score: float
 
-    def to_dict(self) -> dict:
-        return asdict(self)
 
-
-@dataclass
-class ExtractionResult:
+class ExtractionResult(BaseModel):
     """Represents the complete extraction result."""
 
-    entities: List[Any]  # Change from List[Officer] to List[Any] or use a TypeVar
+    entities: List[Any] = Field(default_factory=list)
     raw_response: str
-    extraction_timestamp: datetime = datetime.now(timezone.utc)
+    extraction_timestamp: datetime = Field(default_factory=datetime.utcnow)
 
     def to_dict(self) -> dict:
         return {

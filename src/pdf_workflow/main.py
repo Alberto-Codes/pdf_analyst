@@ -32,9 +32,6 @@ async def main():
     documents = [
         "data/10k_2023.pdf",
         "data/10k_2022.pdf",
-        "data/10k_2021.pdf",
-        "data/10k_2020.pdf",
-        "data/10k_2019.pdf",
     ]
 
     # Process both entity types
