@@ -57,10 +57,17 @@ class BatchProcessor:
         start_time = time.time()
         async with self.semaphore:
             try:
+                if not doc_path:
+                    raise ValueError("Invalid document path provided.")
+                
+                output_path = self._get_output_path(doc_path)
+                if not output_path:
+                    raise ValueError(f"Failed to determine output path for {doc_path}")
+
                 state = GraphState(
                     document_path=doc_path,
                     document_config=self.doc_config,
-                    output_path=self._get_output_path(doc_path),
+                    output_path=output_path,
                 )
 
                 start_node = GenericExtractNode(
