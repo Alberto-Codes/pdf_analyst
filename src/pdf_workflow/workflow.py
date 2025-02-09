@@ -4,7 +4,7 @@ import base64
 import csv
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -33,7 +33,7 @@ class Officer:
     age: str
     title: str
     citations: List[Citation]
-    extracted_at: datetime = datetime.utcnow()
+    extracted_at: datetime = datetime.now(timezone.utc)
     source_document: str = ""
 
     def to_dict(self) -> dict:
@@ -79,7 +79,7 @@ class ExtractionResult:
 
     officers: List[Officer]
     raw_response: str
-    extraction_timestamp: datetime = datetime.utcnow()
+    extraction_timestamp: datetime = datetime.now(timezone.utc)
 
     def to_dict(self) -> dict:
         return {
@@ -254,10 +254,10 @@ def main():
     """Example usage showing database-ready output and CSV export."""
     try:
         parser = GeminiPDFParser()
-        result = parser.extract_officers("10k.pdf")
+        result = parser.extract_officers("data/10k.pdf")
 
         # Export to CSV
-        output_file = "officers_export.csv"
+        output_file = "data/officers_export.csv"
         result.export_to_csv(output_file)
         print(f"\nExported officers data to: {output_file}")
 
