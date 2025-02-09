@@ -1,15 +1,14 @@
 import asyncio
 import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
 from base_types import ExtractionTemplate
+from batch_execution import WorkflowExecutor
 from config import GeminiConfig
 from document_config import DocumentConfig
 from models import ExtractionResult
-from workflow import WorkflowExecutor
 
 
 @dataclass
