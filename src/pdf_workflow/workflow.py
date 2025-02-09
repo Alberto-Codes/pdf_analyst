@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-import json
-
 from config import GeminiConfig
 from google.api_core import retry
 from google.genai import types
-from models import Citation, ExtractionResult, Officer
+from handlers import ResponseHandler
+from models import ExtractionResult
 from prompts import PromptTemplate
 from utils import encode_pdf
 
 
 class GeminiPDFParser:
-    """A class to handle PDF parsing using Google's Gemini AI model."""
-
     def __init__(self, config: GeminiConfig = None):
         self.config = config or GeminiConfig()
         self.client = self.config.create_client()
@@ -23,14 +20,15 @@ class GeminiPDFParser:
     def extract_officers(self, pdf_path: str) -> ExtractionResult:
         """Extract officer information from a PDF document."""
         try:
-            encoded_pdf = encode_pdf(pdf_path)  # Using the utility function
+            # Prepare document
+            encoded_pdf = encode_pdf(pdf_path)
             document = types.Part.from_bytes(
                 data=encoded_pdf,
                 mime_type="application/pdf",
             )
 
+            # Get response
             contents = PromptTemplate.create_extraction_content(document)
-
             response_text = ""
             for chunk in self.client.models.generate_content_stream(
                 model=self.model,
@@ -38,33 +36,11 @@ class GeminiPDFParser:
                 config=self.generate_config,
             ):
                 response_text += chunk.text
-            try:
-                result = json.loads(response_text)
-                officers = []
 
-                for officer_data in result["officers"]:
-                    citations = [
-                        Citation(
-                            page_number=cite["page_number"],
-                            text_snippet=cite["text_snippet"],
-                            confidence_score=cite["confidence_score"],
-                        )
-                        for cite in officer_data["citations"]
-                    ]
-
-                    officer = Officer(
-                        name=officer_data["name"],
-                        age=officer_data["age"],
-                        title=officer_data["title"],
-                        citations=citations,
-                        source_document=pdf_path,
-                    )
-                    officers.append(officer)
-
-                return ExtractionResult(officers=officers, raw_response=response_text)
-
-            except (json.JSONDecodeError, KeyError) as e:
-                raise ValueError(f"Failed to parse response as JSON: {str(e)}")
+            # Parse response
+            return ResponseHandler.parse_response(
+                response_text=response_text, source_document=pdf_path
+            )
 
         except Exception as e:
             raise Exception(f"Error processing PDF: {str(e)}")
