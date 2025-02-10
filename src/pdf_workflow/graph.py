@@ -1,6 +1,10 @@
+from __future__ import annotations
+
 from typing import List, Tuple, Type, TypeVar
 
-from nodes.extract import BaseNode, End, GraphState
+from nodes.base import GraphState
+from nodes.extract import BaseNode, End
+from pydantic import BaseModel
 from pydantic_graph import Graph as PydanticGraph
 from pydantic_graph import GraphRunContext
 
@@ -11,7 +15,7 @@ class Graph(PydanticGraph[GraphState, None, T]):
     """Graph implementation using pydantic-graph for structured workflow execution."""
 
     def __init__(self, nodes: Tuple[Type[BaseNode], ...]):
-        """Nodes should be passed as a tuple of node classes."""
+        """Initialize graph with node types."""
         self.nodes = nodes
 
     async def run(
