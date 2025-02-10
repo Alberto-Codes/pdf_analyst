@@ -1,4 +1,4 @@
-from typing import Dict, Generic, List, Tuple, Type, TypeVar
+from typing import List, Tuple, Type, TypeVar
 
 from nodes.extract import BaseNode, End, GraphState
 from pydantic_graph import Graph as PydanticGraph
@@ -7,18 +7,18 @@ from pydantic_graph import GraphRunContext
 T = TypeVar("T")
 
 
-class Graph(PydanticGraph[GraphState, T]):
+class Graph(PydanticGraph[GraphState, None, T]):
     """Graph implementation using pydantic-graph for structured workflow execution."""
 
-    def __init__(self, nodes: Dict[str, Type[BaseNode]]):
-        """Nodes should be passed as a dictionary with explicit names."""
+    def __init__(self, nodes: List[Type[BaseNode]]):
+        """Nodes should be passed as a list of node classes."""
         self.nodes = nodes
 
     async def run(
         self, start_node: BaseNode, state: GraphState
     ) -> Tuple[T, List[BaseNode]]:
         """Run the graph with a wrapped GraphRunContext."""
-        ctx = GraphRunContext(state=state, deps={})
+        ctx = GraphRunContext(state=state, deps=None)
         history = []
         current_node = start_node
 
