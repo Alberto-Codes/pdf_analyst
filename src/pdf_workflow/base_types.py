@@ -50,29 +50,24 @@ class ExtractionTemplate(BaseModel):
     """Base template for extraction prompts."""
 
     entity_name: str
-    entity_type: str  # ✅ Change from `Type[CitedEntity]` to `str`
+    entity_type: str
     fields: List[str]
     is_singular: bool = False
-
-    def model_post_init(self, __context):
-        """Ensure field mapping and order are correctly initialized."""
-        pass
 
     def get_prompt(self) -> str:
         """Generate appropriate prompt based on entity type."""
         fields_json = ", ".join(f'"{field}": "string"' for field in self.fields)
         entity_key = self.entity_name.lower()
+        plural_suffix = "" if self.is_singular else "s"
 
-        if self.is_singular:
-            return f"""
-            Extract {self.entity_name} information and provide detailed citation.
-            Specifically, extract the total employee count and the corresponding year.
-            
-            Format the response as a JSON object with the following structure:
-            {{
-                "{entity_key}": {{
-                    "count": "number",
-                    "year": "string",
+        return f"""
+        Extract {self.entity_name} information and provide detailed citations.
+        
+        Format the response as a JSON object with the following structure:
+        {{
+            "{entity_key}{plural_suffix}": [
+                {{
+                    {fields_json},
                     "citations": [
                         {{
                             "page_number": number,
@@ -81,39 +76,13 @@ class ExtractionTemplate(BaseModel):
                         }}
                     ]
                 }}
-            }}
-            
-            For the citation:
-            - Include the page number where the information was found.
-            - Include a brief text snippet from the page (max 100 chars).
-            - Provide a confidence score (0.0-1.0) for the citation.
-            
-            Use empty string '' for missing values in any field.
-            If the year is not explicitly mentioned, infer it from the surrounding context.
-            """
-        else:
-            return f"""
-            Extract {self.entity_name} information and provide detailed citations.
-            Format the response as a JSON object with the following structure:
-            {{
-                "{entity_key}s": [
-                    {{
-                        {fields_json},
-                        "citations": [
-                            {{
-                                "page_number": number,
-                                "text_snippet": "string",
-                                "confidence_score": number
-                            }}
-                        ]
-                    }}
-                ]
-            }}
-            
-            For each citation:
-            - Include the page number where the information was found
-            - Include a brief text snippet from the page (max 100 chars)
-            - Provide a confidence score (0.0-1.0) for the citation
-            
-            Use empty string '' for missing values in any field.
-            """
+            ]
+        }}
+        
+        For each citation:
+        - Include the page number where the information was found
+        - Include a brief text snippet from the page (max 100 chars)
+        - Provide a confidence score (0.0-1.0) for the citation
+        
+        Use empty string '' for missing values in any field.
+        """
