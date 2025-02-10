@@ -1,23 +1,25 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
 from typing import List, Type
 
 from base_types import CitedEntity, ExtractionTemplate
+from entities.employee import EmployeeCount
+# ✅ Import entity classes explicitly to ensure they exist in globals()
+from entities.officer import Officer
 from models import Citation, ExtractionResult
 from nodes.base import GraphState
 from nodes.export import ExportNode
+from pydantic import BaseModel, Field
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 
-@dataclass
-class ParseNode(BaseNode):
+class ParseNode(BaseModel, BaseNode):
     """Node that parses the extraction results."""
 
-    entity_type: Type
-    entity_key: str
-    template: ExtractionTemplate
+    entity_type: str = Field(...)
+    entity_key: str = Field(...)
+    template: ExtractionTemplate = Field(...)
 
     def _parse_citations(self, citations_data: List[dict]) -> List[Citation]:
         """Parse citation data into Citation objects."""
@@ -30,43 +32,48 @@ class ParseNode(BaseNode):
             for cite in citations_data
         ]
 
-    def _create_entity(
-        self, entity_data: dict, entity_class: Type, source_document: str
-    ) -> CitedEntity:
+    def _create_entity(self, entity_data: dict, source_document: str) -> CitedEntity:
         """Create an entity instance from JSON extraction output."""
         citations = self._parse_citations(entity_data.pop("citations", []))
-        return entity_class(
-            **entity_data,
-            citations=citations,
-            source_document=source_document,
+
+        # ✅ Dynamically load entity class from globals()
+        entity_class = globals().get(self.entity_type)
+        if not entity_class:
+            raise ValueError(
+                f"Invalid entity type: {self.entity_type}. Available: {list(globals().keys())}"
+            )
+
+        return entity_class.model_validate(
+            {**entity_data, "citations": citations, "source_document": source_document}
         )
 
-    async def run(
-        self, ctx: GraphRunContext[GraphState]
-    ) -> ExportNode | End[ExtractionResult]:
+    async def run(self, ctx: GraphRunContext[GraphState]) -> ExportNode | End[ExtractionResult]:
         try:
-
             result = json.loads(ctx.state.raw_response)
-            entity_class = self.entity_type.with_mapping(self.template.field_mapping)
 
-            key = "employeecount" if self.template.is_singular else "officers"
+            # ✅ Ensure result is always a dictionary, not a list
+            if isinstance(result, list):
+                if len(result) == 1 and isinstance(result[0], dict):  
+                    result = result[0]  # ✅ Unwrap the list if it contains only one dict
+                else:
+                    raise ValueError(f"Expected a JSON object, but got a list with multiple items: {result}")
 
-            if self.template.is_singular:
+            key = self.template.entity_name.lower()
+            key = key if self.template.is_singular else key + "s"
 
-                entity_data = result[key]
-                entities = [
-                    self._create_entity(
-                        entity_data, entity_class, ctx.state.document_path
-                    )
-                ]
-            else:
+            if key not in result:
+                raise ValueError(f"Expected key '{key}' in extraction result but got: {list(result.keys())}")
 
-                entities = [
-                    self._create_entity(
-                        entity_data, entity_class, ctx.state.document_path
-                    )
-                    for entity_data in result.get(key, [])
-                ]
+            entity_data_list = result[key]
+
+            # ✅ Ensure entity_data_list is always a list
+            if not isinstance(entity_data_list, list):
+                entity_data_list = [entity_data_list]
+
+            entities = [
+                self._create_entity(entity_data, ctx.state.document_path)
+                for entity_data in entity_data_list
+            ]
 
             extraction_result = ExtractionResult(
                 entities=entities,
@@ -74,8 +81,6 @@ class ParseNode(BaseNode):
                 extraction_timestamp=ctx.state.extracted_at,
             )
             ctx.state.extraction_result = extraction_result
-
-            ctx.state.field_order = self.template.field_order
 
             return ExportNode()
         except Exception as e:

@@ -56,7 +56,6 @@ class ExtractNode(BaseNode):
 
             # ✅ Assign extracted data back into ctx.state
             ctx.state.raw_response = response_text
-            ctx.state.field_order = self.template.field_order
 
             return ParseNode(
                 entity_type=self.template.entity_type,
