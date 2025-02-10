@@ -14,7 +14,9 @@ from utils import encode_file
 
 
 @dataclass
-class ExtractNode(BaseNode[GraphState, None, ExtractionResult]):  # Add proper generic typing
+class ExtractNode(
+    BaseNode[GraphState, None, ExtractionResult]
+):  # Add proper generic typing
     """Generic node for extracting entities with citations."""
 
     config: GeminiConfig
@@ -59,7 +61,8 @@ class ExtractNode(BaseNode[GraphState, None, ExtractionResult]):  # Add proper g
 
             return ParseNode(
                 entity_type=self.template.entity_type,
-                entity_key=self.template.entity_name.lower() + ("s" if not self.template.is_singular else ""),
+                entity_key=self.template.entity_name.lower()
+                + ("s" if not self.template.is_singular else ""),
                 template=self.template,
             )
         except Exception as e:

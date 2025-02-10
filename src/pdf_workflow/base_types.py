@@ -14,7 +14,7 @@ class CitedEntity(BaseModel):
 
     def to_csv_row(self) -> dict:
         """Convert entity data to a CSV-friendly row format using object attributes."""
-        
+
         pages = ",".join(str(c.page_number) for c in self.citations)
         snippets = "; ".join(c.text_snippet for c in self.citations)
         avg_confidence = (
@@ -37,7 +37,6 @@ class CitedEntity(BaseModel):
             row[field_name] = value
 
         return row
-
 
     @classmethod
     def with_mapping(cls, field_mapping: Dict[str, str] = None) -> "CitedEntity":

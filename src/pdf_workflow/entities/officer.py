@@ -14,6 +14,6 @@ class Officer(CitedEntity):
 
 OFFICER_TEMPLATE = ExtractionTemplate(
     entity_name="Officer",
-    entity_type="Officer",  
+    entity_type="Officer",
     fields=["name", "age", "title"],
 )

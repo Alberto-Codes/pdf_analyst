@@ -6,6 +6,7 @@ from typing import List
 
 from base_types import CitedEntity, ExtractionTemplate
 from entities.employee import EmployeeCount
+
 # ✅ Import entity classes explicitly to ensure they exist in globals()
 from entities.officer import Officer
 from models import Citation, ExtractionResult
@@ -48,22 +49,30 @@ class ParseNode(BaseNode[GraphState, None, ExtractionResult]):
             {**entity_data, "citations": citations, "source_document": source_document}
         )
 
-    async def run(self, ctx: GraphRunContext[GraphState]) -> ExportNode | End[ExtractionResult]:
+    async def run(
+        self, ctx: GraphRunContext[GraphState]
+    ) -> ExportNode | End[ExtractionResult]:
         try:
             result = json.loads(ctx.state.raw_response)
 
             # ✅ Ensure result is always a dictionary, not a list
             if isinstance(result, list):
-                if len(result) == 1 and isinstance(result[0], dict):  
-                    result = result[0]  # ✅ Unwrap the list if it contains only one dict
+                if len(result) == 1 and isinstance(result[0], dict):
+                    result = result[
+                        0
+                    ]  # ✅ Unwrap the list if it contains only one dict
                 else:
-                    raise ValueError(f"Expected a JSON object, but got a list with multiple items: {result}")
+                    raise ValueError(
+                        f"Expected a JSON object, but got a list with multiple items: {result}"
+                    )
 
             key = self.template.entity_name.lower()
             key = key if self.template.is_singular else key + "s"
 
             if key not in result:
-                raise ValueError(f"Expected key '{key}' in extraction result but got: {list(result.keys())}")
+                raise ValueError(
+                    f"Expected key '{key}' in extraction result but got: {list(result.keys())}"
+                )
 
             entity_data_list = result[key]
 
