@@ -4,11 +4,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
-from base_types import ExtractionTemplate
 from batch_execution import WorkflowExecutor
 from config import GeminiConfig
+from core.models import ExtractionResult
 from document_config import DocumentConfig
-from models import ExtractionResult
+from templates.extraction import ExtractionTemplate
 
 
 @dataclass

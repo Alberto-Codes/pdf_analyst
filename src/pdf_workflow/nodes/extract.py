@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from base_types import ExtractionTemplate
 from config import GeminiConfig
+from core.models import ExtractionResult
 from google.genai import types
-from models import ExtractionResult
 from nodes.base import GraphState
 from nodes.parse import ParseNode
 from prompts import PromptTemplate
 from pydantic_graph import BaseNode, End, GraphRunContext
+from templates.extraction import ExtractionTemplate
 from utils import encode_file
 
 

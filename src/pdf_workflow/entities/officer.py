@@ -1,7 +1,7 @@
-from typing import List
+"""Officer entity definition."""
 
-from base_types import CitedEntity, ExtractionTemplate
-from models import Citation
+from core.entities import CitedEntity
+from templates.extraction import ExtractionTemplate
 
 
 class Officer(CitedEntity):

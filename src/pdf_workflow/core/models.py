@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 from datetime import datetime
-from typing import List
+from typing import TYPE_CHECKING, List
 
-from core.entities import CitedEntity
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from core.entities import CitedEntity
 
 
 class Citation(BaseModel):
@@ -12,13 +12,13 @@ class Citation(BaseModel):
 
     page_number: int
     text_snippet: str
-    confidence_score: float = Field(ge=0.0, le=1.0)
+    confidence_score: float
 
 
 class ExtractionResult(BaseModel):
     """Represents the complete extraction result with entities and metadata."""
 
-    entities: List[CitedEntity] = Field(default_factory=list)
+    entities: List["CitedEntity"] = Field(default_factory=list)
     raw_response: str
     extraction_timestamp: datetime = Field(default_factory=datetime.utcnow)
 
@@ -30,7 +30,13 @@ class ExtractionResult(BaseModel):
     def to_dict(self) -> dict:
         """Convert extraction result to dictionary format."""
         return {
-            "entities": [entity.to_dict() for entity in self.entities],
+            "entities": [entity.dict() for entity in self.entities],
             "raw_response": self.raw_response,
             "extraction_timestamp": self.extraction_timestamp.isoformat(),
         }
+
+
+# This is crucial - rebuild the model after all imports are done
+from core.entities import CitedEntity
+
+ExtractionResult.model_rebuild()

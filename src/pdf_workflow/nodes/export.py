@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import csv
 from dataclasses import dataclass
+from pathlib import Path
 
-from base_types import CitedEntity
-from models import ExtractionResult
+from core.entities import CitedEntity
+from core.models import ExtractionResult
 from nodes.base import GraphState
 from pydantic_graph import BaseNode, End, GraphRunContext
 
@@ -26,7 +27,10 @@ class ExportNode(BaseNode[GraphState, None, ExtractionResult]):
             all_fieldnames.update(entity.to_csv_row().keys())
         all_fieldnames = sorted(list(all_fieldnames))
 
-        with open(ctx.state.output_path, "w", newline="", encoding="utf-8") as csvfile:
+        output_path = Path(ctx.state.output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, "w", newline="", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=all_fieldnames)
             writer.writeheader()
             writer.writerows(

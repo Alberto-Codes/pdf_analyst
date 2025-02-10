@@ -20,4 +20,3 @@ class GraphState:
     raw_response: str = field(default="")
     extracted_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     extraction_result: Optional[ExtractionResult] = field(default=None)
-    field_order: Optional[List[str]] = field(default=None)

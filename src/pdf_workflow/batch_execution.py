@@ -2,15 +2,15 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from base_types import ExtractionTemplate
 from config import GeminiConfig
+from core.models import ExtractionResult
 from document_config import DocumentConfig
 from graph import Graph
-from models import ExtractionResult
 from nodes.base import GraphState
 from nodes.export import ExportNode
 from nodes.extract import ExtractNode
 from nodes.parse import ParseNode
+from templates.extraction import ExtractionTemplate
 
 
 @dataclass

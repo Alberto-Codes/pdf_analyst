@@ -1,14 +1,15 @@
 """PDF workflow package for entity extraction using pydantic-graph framework."""
 
-from base_types import CitedEntity, ExtractionTemplate
-from config import GeminiConfig
-from document_config import DocumentConfig
-from graph import Graph
-from models import Citation, ExtractionResult
-from nodes.base import GraphState
-from nodes.export import ExportNode
-from nodes.extract import ExtractNode
-from nodes.parse import ParseNode
+from pdf_workflow.config import GeminiConfig
+from pdf_workflow.core.entities import CitedEntity
+from pdf_workflow.core.models import Citation, ExtractionResult
+from pdf_workflow.document_config import DocumentConfig
+from pdf_workflow.graph import Graph
+from pdf_workflow.nodes.base import GraphState
+from pdf_workflow.nodes.export import ExportNode
+from pdf_workflow.nodes.extract import ExtractNode
+from pdf_workflow.nodes.parse import ParseNode
+from pdf_workflow.templates.extraction import ExtractionTemplate
 
 __all__ = [
     # Core framework components

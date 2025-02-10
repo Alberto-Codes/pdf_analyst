@@ -1,5 +1,7 @@
-from base_types import CitedEntity, ExtractionTemplate
-from pydantic import BaseModel
+"""Employee count entity definition."""
+
+from core.entities import CitedEntity
+from templates.extraction import ExtractionTemplate
 
 
 class EmployeeCount(CitedEntity):
@@ -11,7 +13,7 @@ class EmployeeCount(CitedEntity):
 
 EMPLOYEE_TEMPLATE = ExtractionTemplate(
     entity_name="EmployeeCount",
-    entity_type="EmployeeCount",  # ✅ Pass class name as a string
+    entity_type="EmployeeCount",
     fields=["count", "year"],
     is_singular=True,
 )

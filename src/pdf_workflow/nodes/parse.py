@@ -4,13 +4,14 @@ import json
 from dataclasses import dataclass
 from typing import List
 
-from base_types import CitedEntity, ExtractionTemplate
+from core.entities import CitedEntity
+from core.models import Citation, ExtractionResult
 from entities.employee import EmployeeCount
 from entities.officer import Officer
-from models import Citation, ExtractionResult
 from nodes.base import GraphState
 from nodes.export import ExportNode
 from pydantic_graph import BaseNode, End, GraphRunContext
+from templates.extraction import ExtractionTemplate
 
 
 @dataclass
