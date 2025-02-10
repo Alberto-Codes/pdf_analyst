@@ -1,6 +1,7 @@
+from __future__ import annotations
+
 import asyncio
 import time
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List
 
@@ -8,21 +9,28 @@ from batch_execution import WorkflowExecutor
 from config import GeminiConfig
 from core.models import ExtractionResult
 from document_config import DocumentConfig
+from pydantic import BaseModel, Field
 from templates.extraction import ExtractionTemplate
 
 
-@dataclass
-class BatchProcessor:
+class BatchProcessor(BaseModel):
     """Processes multiple PDFs asynchronously."""
 
     config: GeminiConfig
     doc_config: DocumentConfig
     template: ExtractionTemplate
-    output_dir: str = "data/exports"
-    max_concurrent: int = field(default=5)
-    chunk_size: int = field(default=3)
+    output_dir: str = Field(default="data/exports")
+    max_concurrent: int = Field(default=5)
+    chunk_size: int = Field(default=3)
+    executor: WorkflowExecutor = None
+    semaphore: asyncio.Semaphore = None
 
-    def __post_init__(self):
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True
+
+    def model_post_init(self, _):
         """Ensure output directory exists and initialize resources."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
