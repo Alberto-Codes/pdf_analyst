@@ -12,36 +12,39 @@ class ConfigureAPI(BaseNode[GraphState]):
     """Configure the API request for generating content.
 
     This class is responsible for setting up the configuration for the
-    Gemini API client. It uses the `GraphState` to initialize the necessary
-    configurations for content generation. The `run` method configures the
-    Gemini client and content generation parameters.
+    Gemini API client. It retrieves the configuration from the `GraphState`
+    and uses it to initialize the necessary settings for content generation.
+    The `run` method sets up the Gemini client, defines content generation
+    parameters, and configures safety settings to ensure appropriate content.
 
     Attributes:
-        None directly, as all configuration is passed via the `GraphState`
-        in the `run` method. The class relies on the context (`ctx.state`)
-        to access the necessary parameters for the configuration.
+        None directly, as the configuration is managed by the `GraphState`
+        and passed through the `ctx.state` in the `run` method. The class
+        relies on the context to access the required configuration parameters.
     """
 
     async def run(self, ctx: GraphRunContext[GraphState]) -> ExecuteAPI:
         """Run the configuration setup for the Gemini API.
 
-        Uses the `GraphState` from the context to set up the Gemini client
-        and configure the content generation parameters. This includes
-        temperature, top_p, and max_tokens, as well as safety settings for
-        content filtering.
+        This method uses the `GraphState` from the context to configure the
+        Gemini client and set up the content generation parameters, including
+        temperature, top_p, max_tokens, response MIME type, and response schema.
+        Additionally, it configures safety settings for content filtering
+        to avoid harmful or inappropriate content.
 
         Args:
             ctx (GraphRunContext[GraphState]): The context containing the
-                graph state, including the parameters needed for configuration.
+                graph state, which holds the configuration parameters needed
+                to set up the Gemini client and content generation settings.
 
         Returns:
-            ExecuteAPI: An instance of the `ExecuteAPI` node, which will perform
-                the content generation based on the configured settings.
+            ExecuteAPI: An instance of the `ExecuteAPI` node, which will
+                execute the content generation using the configured settings.
         """
-        # Initialize the Gemini client with the state location
+        # Initialize the Gemini client using the state location
         ctx.state.client = genai.Client(vertexai=True, location=ctx.state.location)
 
-        # Set up the content generation configuration
+        # Set up the content generation configuration based on the state
         ctx.state.config = types.GenerateContentConfig(
             temperature=ctx.state.temperature,
             top_p=ctx.state.top_p,
@@ -61,7 +64,9 @@ class ConfigureAPI(BaseNode[GraphState]):
                     category="HARM_CATEGORY_HARASSMENT", threshold="OFF"
                 ),
             ],
-            response_mime_type="application/json",
+            response_mime_type=ctx.state.response_mime_type,
+            response_schema=ctx.state.response_schema,
         )
-        # Return an instance of ExecuteAPI to perform content generation
+
+        # Return an instance of ExecuteAPI to generate content based on the configuration
         return ExecuteAPI()
