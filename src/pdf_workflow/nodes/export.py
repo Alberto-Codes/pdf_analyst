@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import csv
-from dataclasses import dataclass
 from pathlib import Path
 
 from core.entities import CitedEntity
 from core.models import ExtractionResult
 from nodes.base import GraphState
+from pydantic import BaseModel
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 
-@dataclass
-class ExportNode(BaseNode[GraphState, None, ExtractionResult]):
+class ExportNode(BaseNode[GraphState, None, ExtractionResult], BaseModel):
     """Node that handles CSV export for any type of CitedEntity."""
+
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True
 
     async def run(self, ctx: GraphRunContext[GraphState]) -> End[ExtractionResult]:
         if not ctx.state.extraction_result or not ctx.state.extraction_result.entities:
