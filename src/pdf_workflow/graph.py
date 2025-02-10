@@ -38,3 +38,12 @@ class Graph(PydanticGraph[GraphState, D, T]):
                 return result.data, history
 
             current_node = result
+
+    def save_workflow_diagram(self, output_path: str, highlighted_nodes: List[Type[BaseNode]] | None = None) -> None:
+        """Generate and save a mermaid diagram of the workflow.
+        
+        Args:
+            output_path: Path to save the diagram PNG file
+            highlighted_nodes: Optional list of node types to highlight in the diagram
+        """
+        self.mermaid_save(output_path, highlighted_nodes=highlighted_nodes)
