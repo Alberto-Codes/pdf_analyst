@@ -1,5 +1,6 @@
+from __future__ import annotations
+
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
 from config import GeminiConfig
@@ -10,16 +11,31 @@ from nodes.base import GraphState
 from nodes.export import ExportNode
 from nodes.extract import ExtractNode
 from nodes.parse import ParseNode
+from pydantic import BaseModel
 from templates.extraction import ExtractionTemplate
 
 
-@dataclass
-class WorkflowExecutor:
+class WorkflowExecutor(BaseModel):
     """Handles the execution of document processing workflows."""
 
     config: GeminiConfig
     doc_config: DocumentConfig
     template: ExtractionTemplate
+
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True
+
+    @classmethod
+    def create(
+        cls,
+        config: GeminiConfig,
+        doc_config: DocumentConfig,
+        template: ExtractionTemplate,
+    ) -> "WorkflowExecutor":
+        """Create a new WorkflowExecutor instance with the given parameters."""
+        return cls(config=config, doc_config=doc_config, template=template)
 
     def _get_output_path(self, input_path: str, output_dir: str) -> str:
         """Generate output path for a given input PDF."""

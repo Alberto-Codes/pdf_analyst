@@ -26,7 +26,9 @@ class BatchProcessor:
         """Ensure output directory exists and initialize resources."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
-        self.executor = WorkflowExecutor(self.config, self.doc_config, self.template)
+        self.executor = WorkflowExecutor(
+            config=self.config, doc_config=self.doc_config, template=self.template
+        )
 
     async def _process_chunk(
         self, chunk: List[str]
