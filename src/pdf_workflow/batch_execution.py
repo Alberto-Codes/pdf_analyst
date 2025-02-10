@@ -44,7 +44,7 @@ class WorkflowExecutor:
             )
 
             start_node = ExtractNode(config=self.config, template=self.template)
-            workflow = Graph(nodes=[ExtractNode, ParseNode, ExportNode])
+            workflow = Graph(nodes=(ExtractNode, ParseNode, ExportNode))
 
             result, history = await workflow.run(start_node, state)
 

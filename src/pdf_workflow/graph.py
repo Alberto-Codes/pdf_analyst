@@ -10,8 +10,8 @@ T = TypeVar("T")
 class Graph(PydanticGraph[GraphState, None, T]):
     """Graph implementation using pydantic-graph for structured workflow execution."""
 
-    def __init__(self, nodes: List[Type[BaseNode]]):
-        """Nodes should be passed as a list of node classes."""
+    def __init__(self, nodes: Tuple[Type[BaseNode], ...]):
+        """Nodes should be passed as a tuple of node classes."""
         self.nodes = nodes
 
     async def run(
