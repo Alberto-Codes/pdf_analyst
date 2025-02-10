@@ -29,6 +29,8 @@ class ExportNode(BaseNode[GraphState, None, ExtractionResult]):
         with open(ctx.state.output_path, "w", newline="", encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=all_fieldnames)
             writer.writeheader()
-            writer.writerows(entity.to_csv_row() for entity in ctx.state.extraction_result.entities)
+            writer.writerows(
+                entity.to_csv_row() for entity in ctx.state.extraction_result.entities
+            )
 
         return End(ctx.state.extraction_result)

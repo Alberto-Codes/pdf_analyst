@@ -13,11 +13,11 @@ from models import ExtractionResult
 class GraphState:
     """State tracking for the document extraction process."""
 
+    document_path: str
+    document_config: DocumentConfig
+    output_path: str
     run_id: str = field(default_factory=lambda: str(uuid4()))
-    document_path: str = ""
-    document_config: DocumentConfig = field(default_factory=DocumentConfig)
-    raw_response: str = ""
+    raw_response: str = field(default="")
     extracted_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    extraction_result: Optional[ExtractionResult] = None
-    output_path: str = "data/extraction_export.csv"
-    field_order: Optional[List[str]] = None
+    extraction_result: Optional[ExtractionResult] = field(default=None)
+    field_order: Optional[List[str]] = field(default=None)
