@@ -1,150 +1,23 @@
-from dataclasses import dataclass
-from typing import Optional
+from config.configure_api import ConfigureAPI
+from graph.gemini_graph import gemini_graph
 
-from google import genai
-from google.genai import types
-from pydantic_graph import BaseNode, End, Graph, GraphRunContext
+if __name__ == "__main__":
+    """Run the Gemini graph synchronously.
 
-
-@dataclass
-class ConfigureAPI(BaseNode[None, None, str]):
-    """Configure the API request for generating content.
-
-    This class is responsible for setting up the configuration for the
-    Gemini API client, including parameters like temperature, top_p,
-    max_tokens, and safety settings. It initializes the necessary
-    configurations for content generation.
+    This block of code runs the `gemini_graph` synchronously using the
+    `ConfigureAPI` node to configure the API with a prompt and additional
+    parameters such as temperature and top_p. The result of the graph execution
+    and the execution history are returned.
 
     Attributes:
-        prompt (str): The prompt to send to the API for content generation.
-        location (str): The location of the API client (default is "us-central1").
-        model (str): The model to use for content generation (default is "gemini-2.0-flash-001").
-        temperature (float): Controls randomness in the generation (default is 0.7).
-        top_p (float): Probability distribution for sampling (default is 0.95).
-        max_tokens (int): The maximum number of tokens to generate (default is 8192).
+        result (str): The result of the content generation from the API.
+        history (list): The execution history of the graph, including
+        all nodes executed in sequence.
     """
-
-    prompt: str
-    location: str = "us-central1"
-    model: str = "gemini-2.0-flash-001"
-    temperature: float = 0.7
-    top_p: float = 0.95
-    max_tokens: int = 8192
-
-    async def run(self, ctx: GraphRunContext) -> "ExecuteAPI":
-        """Run the configuration setup for the API.
-
-        Initializes a Gemini client and sets up the generation configuration
-        for the API based on the instance's attributes.
-
-        Args:
-            ctx (GraphRunContext): The context in which the graph is running.
-
-        Returns:
-            ExecuteAPI: An instance of the ExecuteAPI node to perform the
-            content generation.
-        """
-        client = genai.Client(vertexai=True, location=self.location)
-        generate_config = types.GenerateContentConfig(
-            temperature=self.temperature,
-            top_p=self.top_p,
-            max_output_tokens=self.max_tokens,
-            response_modalities=["TEXT"],
-            safety_settings=[
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"
-                ),
-                types.SafetySetting(
-                    category="HARM_CATEGORY_HARASSMENT", threshold="OFF"
-                ),
-            ],
-            response_mime_type="application/json",
+    result, history = gemini_graph.run_sync(
+        ConfigureAPI(
+            prompt="What is the meaning of life?",
+            temperature=0.7,
+            top_p=0.95,
         )
-        return ExecuteAPI(prompt=self.prompt, client=client, config=generate_config)
-
-
-@dataclass
-class ExecuteAPI(BaseNode[None, None, str]):
-    """Execute the content generation API request.
-
-    This class sends the prompt and configuration to the Gemini API
-    to generate content, using the provided client and configuration.
-
-    Attributes:
-        prompt (str): The prompt for content generation.
-        client (genai.Client): The Gemini API client used for sending requests.
-        config (types.GenerateContentConfig): The configuration for generating content.
-    """
-
-    prompt: str
-    client: genai.Client
-    config: types.GenerateContentConfig
-
-    async def run(self, ctx: GraphRunContext) -> "PrintResponse":
-        """Run the content generation API request.
-
-        Sends the content generation request to the Gemini API with the
-        provided prompt and configuration. The API response is then passed
-        to the next node.
-
-        Args:
-            ctx (GraphRunContext): The context in which the graph is running.
-
-        Returns:
-            PrintResponse: An instance of the PrintResponse node to
-            print the response from the API.
-        """
-        response = self.client.models.generate_content(
-            model="gemini-2.0-flash-001",
-            contents=[types.Part.from_text(text=self.prompt)],
-            config=self.config,
-        )
-        return PrintResponse(response=response.text)
-
-
-@dataclass
-class PrintResponse(BaseNode[None, None, str]):
-    """Print the response from the Gemini API.
-
-    This class takes the response text generated by the Gemini API and
-    prints it to the console.
-
-    Attributes:
-        response (str): The response text to print.
-    """
-
-    response: str
-
-    async def run(self, ctx: GraphRunContext) -> End[str]:
-        """Print the response text to the console.
-
-        Prints the response from the Gemini API and ends the process.
-
-        Args:
-            ctx (GraphRunContext): The context in which the graph is running.
-
-        Returns:
-            End[str]: The end node with the response text.
-        """
-        print(f"Gemini Response: {self.response}")
-        return End(self.response)
-
-
-# Create the graph
-gemini_graph = Graph(nodes=[ConfigureAPI, ExecuteAPI, PrintResponse])
-
-# Example usage
-result, history = gemini_graph.run_sync(
-    ConfigureAPI(
-        prompt="What is the meaning of life?",
-        temperature=0.7,
-        top_p=0.95,
-        max_tokens=8192,
     )
-)
