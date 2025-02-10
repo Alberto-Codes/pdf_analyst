@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 
-class ExportNode(BaseNode[GraphState, None, ExtractionResult], BaseModel):
+class ExportNode(BaseModel, BaseNode[GraphState, None, ExtractionResult]):
     """Node that handles CSV export for any type of CitedEntity."""
 
     class Config:

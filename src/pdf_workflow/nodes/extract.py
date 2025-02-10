@@ -1,26 +1,27 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from config import GeminiConfig
 from core.models import ExtractionResult
 from google.genai import types
 from nodes.base import GraphState
 from nodes.parse import ParseNode
 from prompts import PromptTemplate
+from pydantic import BaseModel
 from pydantic_graph import BaseNode, End, GraphRunContext
 from templates.extraction import ExtractionTemplate
 from utils import encode_file
 
 
-@dataclass
-class ExtractNode(
-    BaseNode[GraphState, None, ExtractionResult]
-):  # Add proper generic typing
+class ExtractNode(BaseModel, BaseNode[GraphState, None, ExtractionResult]):
     """Generic node for extracting entities with citations."""
 
     config: GeminiConfig
     template: ExtractionTemplate
+
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True
 
     async def run(
         self, ctx: GraphRunContext[GraphState]
@@ -54,7 +55,6 @@ class ExtractNode(
             )
             response_text = response.text
 
-        # ✅ Assign extracted data back into ctx.state
         ctx.state.raw_response = response_text
 
         return ParseNode(
