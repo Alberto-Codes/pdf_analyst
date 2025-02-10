@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from config.state import GraphState
 from execution.execute_api import ExecuteAPI
 from google import genai
 from google.genai import types
@@ -7,48 +8,44 @@ from pydantic_graph import BaseNode, GraphRunContext
 
 
 @dataclass
-class ConfigureAPI(BaseNode[None, None, str]):
+class ConfigureAPI(BaseNode[GraphState]):
     """Configure the API request for generating content.
 
     This class is responsible for setting up the configuration for the
-    Gemini API client, including parameters like temperature, top_p,
-    max_tokens, and safety settings. It initializes the necessary
-    configurations for content generation.
+    Gemini API client. It uses the `GraphState` to initialize the necessary
+    configurations for content generation. The `run` method configures the
+    Gemini client and content generation parameters.
 
     Attributes:
-        prompt (str): The prompt to send to the API for content generation.
-        location (str): The location of the API client (default is "us-central1").
-        model (str): The model to use for content generation (default is "gemini-2.0-flash-001").
-        temperature (float): Controls randomness in the generation (default is 0.7).
-        top_p (float): Probability distribution for sampling (default is 0.95).
-        max_tokens (int): The maximum number of tokens to generate (default is 8192).
+        None directly, as all configuration is passed via the `GraphState`
+        in the `run` method. The class relies on the context (`ctx.state`)
+        to access the necessary parameters for the configuration.
     """
 
-    prompt: str
-    location: str = "us-central1"
-    model: str = "gemini-2.0-flash-001"
-    temperature: float = 0.7
-    top_p: float = 0.95
-    max_tokens: int = 8192
+    async def run(self, ctx: GraphRunContext[GraphState]) -> ExecuteAPI:
+        """Run the configuration setup for the Gemini API.
 
-    async def run(self, ctx: GraphRunContext) -> "ExecuteAPI":
-        """Run the configuration setup for the API.
-
-        Initializes a Gemini client and sets up the generation configuration
-        for the API based on the instance's attributes.
+        Uses the `GraphState` from the context to set up the Gemini client
+        and configure the content generation parameters. This includes
+        temperature, top_p, and max_tokens, as well as safety settings for
+        content filtering.
 
         Args:
-            ctx (GraphRunContext): The context in which the graph is running.
+            ctx (GraphRunContext[GraphState]): The context containing the
+                graph state, including the parameters needed for configuration.
 
         Returns:
-            ExecuteAPI: An instance of the ExecuteAPI node to perform the
-            content generation.
+            ExecuteAPI: An instance of the `ExecuteAPI` node, which will perform
+                the content generation based on the configured settings.
         """
-        client = genai.Client(vertexai=True, location=self.location)
-        generate_config = types.GenerateContentConfig(
-            temperature=self.temperature,
-            top_p=self.top_p,
-            max_output_tokens=self.max_tokens,
+        # Initialize the Gemini client with the state location
+        ctx.state.client = genai.Client(vertexai=True, location=ctx.state.location)
+
+        # Set up the content generation configuration
+        ctx.state.config = types.GenerateContentConfig(
+            temperature=ctx.state.temperature,
+            top_p=ctx.state.top_p,
+            max_output_tokens=ctx.state.max_tokens,
             response_modalities=["TEXT"],
             safety_settings=[
                 types.SafetySetting(
@@ -66,4 +63,5 @@ class ConfigureAPI(BaseNode[None, None, str]):
             ],
             response_mime_type="application/json",
         )
-        return ExecuteAPI(prompt=self.prompt, client=client, config=generate_config)
+        # Return an instance of ExecuteAPI to perform content generation
+        return ExecuteAPI()
