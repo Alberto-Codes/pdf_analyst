@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import List
 
@@ -24,6 +25,7 @@ class BatchProcessor(BaseModel):
     chunk_size: int = Field(default=3)
     executor: WorkflowExecutor = None
     semaphore: asyncio.Semaphore = None
+    process_pool: ProcessPoolExecutor = None
 
     class Config:
         """Pydantic model configuration."""
@@ -34,9 +36,22 @@ class BatchProcessor(BaseModel):
         """Ensure output directory exists and initialize resources."""
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
         self.semaphore = asyncio.Semaphore(self.max_concurrent)
+        self.process_pool = ProcessPoolExecutor()
         self.executor = WorkflowExecutor(
-            config=self.config, doc_config=self.doc_config, template=self.template
+            config=self.config,
+            doc_config=self.doc_config,
+            template=self.template,
+            deps={"executor": self.process_pool},
         )
+
+    async def __aenter__(self):
+        """Context manager entry."""
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        if self.process_pool:
+            self.process_pool.shutdown()
 
     async def _process_chunk(
         self, chunk: List[str]
