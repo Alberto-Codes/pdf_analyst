@@ -24,7 +24,7 @@ class WorkflowExecutor:
     def _get_output_path(self, input_path: str, output_dir: str) -> str:
         """Generate output path for a given input PDF."""
         input_name = Path(input_path).stem
-        return str(Path(output_dir) / f"{input_name}_export.csv")
+        return str(Path(output_dir) / f"{input_name}_extraction.csv")
 
     async def process(
         self, doc_path: str, output_dir: str
@@ -44,13 +44,7 @@ class WorkflowExecutor:
             )
 
             start_node = ExtractNode(config=self.config, template=self.template)
-            workflow = Graph(
-                nodes={
-                    "extract": ExtractNode,
-                    "parse": ParseNode,
-                    "export": ExportNode,
-                }
-            )
+            workflow = Graph(nodes=[ExtractNode, ParseNode, ExportNode])
 
             result, history = await workflow.run(start_node, state)
 
