@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from typing import List
+from typing import Dict, List, Type
 
 from core.entities import CitedEntity
 from core.models import Citation, ExtractionResult
@@ -10,17 +9,28 @@ from entities.employee import EmployeeCount
 from entities.officer import Officer
 from nodes.base import GraphState
 from nodes.export import ExportNode
+from pydantic import BaseModel
 from pydantic_graph import BaseNode, End, GraphRunContext
 from templates.extraction import ExtractionTemplate
 
+# Register available entity types
+ENTITY_TYPES: Dict[str, Type[CitedEntity]] = {
+    "Officer": Officer,
+    "EmployeeCount": EmployeeCount,
+}
 
-@dataclass
-class ParseNode(BaseNode[GraphState, None, ExtractionResult]):
+
+class ParseNode(BaseModel, BaseNode[GraphState, None, ExtractionResult]):
     """Node that parses the extraction results."""
 
     entity_type: str
     entity_key: str
     template: ExtractionTemplate
+
+    class Config:
+        """Pydantic model configuration."""
+
+        arbitrary_types_allowed = True
 
     def _parse_citations(self, citations_data: List[dict]) -> List[Citation]:
         """Parse citation data into Citation objects."""
@@ -37,10 +47,10 @@ class ParseNode(BaseNode[GraphState, None, ExtractionResult]):
         """Create an entity instance from JSON extraction output."""
         citations = self._parse_citations(entity_data.pop("citations", []))
 
-        entity_class = globals().get(self.entity_type)
+        entity_class = ENTITY_TYPES.get(self.entity_type)
         if not entity_class:
             raise ValueError(
-                f"Invalid entity type: {self.entity_type}. Available: {list(globals().keys())}"
+                f"Invalid entity type: {self.entity_type}. Available: {list(ENTITY_TYPES.keys())}"
             )
 
         return entity_class.model_validate(
