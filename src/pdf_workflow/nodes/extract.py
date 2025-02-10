@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from config import GeminiConfig
 from core.models import ExtractionResult
 from google.genai import types
@@ -23,6 +25,15 @@ class ExtractNode(BaseModel, BaseNode[GraphState, None, ExtractionResult]):
 
         arbitrary_types_allowed = True
 
+    def _generate_content(self, contents) -> str:
+        """CPU-bound content generation."""
+        response = self.config.client.models.generate_content(
+            model=self.config.model,
+            contents=contents,
+            config=self.config.generate_config,
+        )
+        return response.text
+
     async def run(
         self, ctx: GraphRunContext[GraphState]
     ) -> ParseNode | End[ExtractionResult]:
@@ -39,21 +50,19 @@ class ExtractNode(BaseModel, BaseNode[GraphState, None, ExtractionResult]):
             document, self.template.get_prompt()
         )
 
-        response_text = ""
-        if ctx.state.document_config.stream_response:
+        loop = asyncio.get_running_loop()
+        if not ctx.state.document_config.stream_response:
+            response_text = await loop.run_in_executor(
+                ctx.deps.executor, self._generate_content, contents
+            )
+        else:
+            response_text = ""
             for chunk in self.config.client.models.generate_content_stream(
                 model=self.config.model,
                 contents=contents,
                 config=self.config.generate_config,
             ):
                 response_text += chunk.text
-        else:
-            response = self.config.client.models.generate_content(
-                model=self.config.model,
-                contents=contents,
-                config=self.config.generate_config,
-            )
-            response_text = response.text
 
         ctx.state.raw_response = response_text
 
