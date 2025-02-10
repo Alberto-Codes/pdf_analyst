@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import time
 from pathlib import Path
+from typing import Any
 
 from config import GeminiConfig
 from core.models import ExtractionResult
@@ -43,7 +44,7 @@ class WorkflowExecutor(BaseModel):
         return str(Path(output_dir) / f"{input_name}_extraction.csv")
 
     async def process(
-        self, doc_path: str, output_dir: str
+        self, doc_path: str, output_dir: str, deps: dict[str, Any] | None = None
     ) -> tuple[str, ExtractionResult | None]:
         """Run the workflow for a single document."""
         start_time = time.time()
@@ -62,7 +63,7 @@ class WorkflowExecutor(BaseModel):
             start_node = ExtractNode(config=self.config, template=self.template)
             workflow = Graph(nodes=(ExtractNode, ParseNode, ExportNode))
 
-            result, history = await workflow.run(start_node, state)
+            result, history = await workflow.run(start_node, state, deps=deps)
 
             print(f"\nProcessed {doc_path}:")
             print(f"Entities extracted: {len(result.entities)}")
