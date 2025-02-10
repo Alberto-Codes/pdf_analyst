@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import json
-from typing import List, Type
+from dataclasses import dataclass
+from typing import List
 
 from base_types import CitedEntity, ExtractionTemplate
 from entities.employee import EmployeeCount
@@ -10,16 +11,16 @@ from entities.officer import Officer
 from models import Citation, ExtractionResult
 from nodes.base import GraphState
 from nodes.export import ExportNode
-from pydantic import BaseModel, Field
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 
-class ParseNode(BaseModel, BaseNode):
+@dataclass
+class ParseNode(BaseNode[GraphState, None, ExtractionResult]):
     """Node that parses the extraction results."""
 
-    entity_type: str = Field(...)
-    entity_key: str = Field(...)
-    template: ExtractionTemplate = Field(...)
+    entity_type: str
+    entity_key: str
+    template: ExtractionTemplate
 
     def _parse_citations(self, citations_data: List[dict]) -> List[Citation]:
         """Parse citation data into Citation objects."""

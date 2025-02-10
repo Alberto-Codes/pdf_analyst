@@ -59,7 +59,7 @@ class ExtractNode(BaseNode[GraphState, None, ExtractionResult]):  # Add proper g
 
             return ParseNode(
                 entity_type=self.template.entity_type,
-                entity_key=self.template.entity_name.lower() + "s",
+                entity_key=self.template.entity_name.lower() + ("s" if not self.template.is_singular else ""),
                 template=self.template,
             )
         except Exception as e:
