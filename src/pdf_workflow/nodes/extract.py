@@ -14,7 +14,7 @@ from utils import encode_file
 
 
 @dataclass
-class ExtractNode(BaseNode):
+class ExtractNode(BaseNode[GraphState, None, ExtractionResult]):  # Add proper generic typing
     """Generic node for extracting entities with citations."""
 
     config: GeminiConfig
