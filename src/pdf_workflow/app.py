@@ -1,19 +1,19 @@
-from config.configure_api import ConfigureAPI
 from config.state import GraphState
 from graph.gemini_graph import gemini_graph
 from models.employee_info import EmployeeInfo
+from nodes.configure_api import ConfigureAPI
 from utils.schema_utils import get_response_schema_from_model
 
 if __name__ == "__main__":
     """Executes the Gemini graph synchronously with an initialized state.
 
-    This script runs the `gemini_graph` synchronously, starting from the 
-    `ConfigureAPI` node. It initializes a `GraphState` object with necessary 
-    parameters, including the document URL, MIME type, prompt, and response schema. 
-    The execution of the graph results in content generation, with the generated 
+    This script runs the `gemini_graph` synchronously, starting from the
+    `ConfigureAPI` node. It initializes a `GraphState` object with necessary
+    parameters, including the document URL, MIME type, prompt, and response schema.
+    The execution of the graph results in content generation, with the generated
     response and execution history returned.
 
-    The script extracts information from a PDF document using the Gemini API, 
+    The script extracts information from a PDF document using the Gemini API,
     focusing on retrieving employee count details.
 
     Process:
@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     Attributes:
         result (str): The generated content response from the Gemini API.
-        history (list): The execution history of the graph, tracking all 
+        history (list): The execution history of the graph, tracking all
             executed nodes in sequence.
     """
     # Initialize the state for the content generation process

@@ -1,7 +1,7 @@
-from config.configure_api import ConfigureAPI
-from execution.execute_api import ExecuteAPI
-from execution.print_response import PrintResponse
+from nodes.configure_api import ConfigureAPI
+from nodes.execute_api import ExecuteAPI
 from nodes.export import ExportToCSV
+from nodes.print_response import PrintResponse
 from pydantic_graph import Graph
 
 # Create the Gemini graph
