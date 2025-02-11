@@ -1,15 +1,8 @@
 from config.configure_api import ConfigureAPI
 from config.state import GraphState
 from graph.gemini_graph import gemini_graph
-from pydantic import BaseModel, Field
-
-
-class EmployeeInfo(BaseModel):
-    total_employees: int = Field(description="Total number of employees")
-    year: int = Field(description="Year of the employee count")
-    source_page: int = Field(description="Page number where information was found")
-    source_text: str = Field(description="Exact text snippet from document")
-    confidence: float = Field(description="Confidence score", ge=0.0, le=1.0)
+from models.employee_info import EmployeeInfo
+from pydantic import BaseModel
 
 
 def get_response_schema_from_model(model_class: type[BaseModel]) -> dict:
