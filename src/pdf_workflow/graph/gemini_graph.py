@@ -1,16 +1,20 @@
 from config.configure_api import ConfigureAPI
 from execution.execute_api import ExecuteAPI
 from execution.print_response import PrintResponse
+from nodes.export import ExportToCSV
 from pydantic_graph import Graph
 
 # Create the Gemini graph
-gemini_graph = Graph(nodes=[ConfigureAPI, ExecuteAPI, PrintResponse])
-"""
-This creates an instance of a `Graph` which represents the flow of nodes
-for content generation. The nodes are responsible for configuring the 
-API, executing the API request, and printing the response.
+gemini_graph = Graph(nodes=[ConfigureAPI, ExecuteAPI, PrintResponse, ExportToCSV])
+
+"""Defines the Gemini API execution graph.
+
+This creates an instance of a `Graph` that represents the sequence of nodes 
+for processing content generation. The nodes are responsible for configuring 
+the API, executing the API request, printing the response, and exporting 
+the result to a CSV file.
 
 Attributes:
     gemini_graph (Graph): The graph object that defines the node sequence 
-    for generating and printing content from the Gemini API.
+        for generating, processing, and exporting content from the Gemini API.
 """
