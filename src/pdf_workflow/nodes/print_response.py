@@ -1,12 +1,12 @@
 from dataclasses import dataclass
 
-from config.state import GraphState
 from nodes.export import ExportToCSV
 from pydantic_graph import BaseNode, End, GraphRunContext
+from states.hrp123 import Hrp123GraphState
 
 
 @dataclass
-class PrintResponse(BaseNode[GraphState]):
+class PrintResponse(BaseNode[Hrp123GraphState]):
     """Prints the response from the Gemini API.
 
     This class retrieves the response text from `GraphState` and prints it
@@ -18,7 +18,7 @@ class PrintResponse(BaseNode[GraphState]):
         is accessed from the `GraphState` in the `run` method.
     """
 
-    async def run(self, ctx: GraphRunContext[GraphState]) -> ExportToCSV:
+    async def run(self, ctx: GraphRunContext[Hrp123GraphState]) -> ExportToCSV:
         """Prints the response text and returns the next node.
 
         This method prints the response text retrieved from `GraphState`

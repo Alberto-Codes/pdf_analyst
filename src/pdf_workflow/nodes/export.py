@@ -4,12 +4,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from config.state import GraphState
 from pydantic_graph import BaseNode, End, GraphRunContext
+from states.hrp123 import Hrp123GraphState
 
 
 @dataclass
-class ExportToCSV(BaseNode[GraphState]):
+class ExportToCSV(BaseNode[Hrp123GraphState]):
     """Node to export JSON response data to a CSV file.
 
     This node reads a JSON-formatted response from the graph state, converts
@@ -17,7 +17,7 @@ class ExportToCSV(BaseNode[GraphState]):
     file is named using a timestamp to ensure uniqueness.
     """
 
-    async def run(self, ctx: GraphRunContext[GraphState]) -> End[Path]:
+    async def run(self, ctx: GraphRunContext[Hrp123GraphState]) -> End[Path]:
         """Executes the CSV export process.
 
         This method retrieves the JSON response from the graph state, parses

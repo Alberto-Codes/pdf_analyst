@@ -1,14 +1,14 @@
 from dataclasses import dataclass
 
-from config.state import GraphState
 from google import genai
 from google.genai import types
-from nodes.execute_api import ExecuteAPI
+from nodes.evaluate import Evaluate
 from pydantic_graph import BaseNode, GraphRunContext
+from states.hrp123 import Hrp123GraphState
 
 
 @dataclass
-class ConfigureAPI(BaseNode[GraphState]):
+class ConfigureAPI(BaseNode[Hrp123GraphState]):
     """Configure the API request for generating content.
 
     This class is responsible for setting up the configuration for the
@@ -23,7 +23,7 @@ class ConfigureAPI(BaseNode[GraphState]):
         relies on the context to access the required configuration parameters.
     """
 
-    async def run(self, ctx: GraphRunContext[GraphState]) -> ExecuteAPI:
+    async def run(self, ctx: GraphRunContext[Hrp123GraphState]) -> Evaluate:
         """Run the configuration setup for the Gemini API.
 
         This method uses the `GraphState` from the context to configure the
@@ -42,13 +42,11 @@ class ConfigureAPI(BaseNode[GraphState]):
                 execute the content generation using the configured settings.
         """
         # Initialize the Gemini client using the state location
-        ctx.state.client = genai.Client(vertexai=True, location=ctx.state.location)
+        ctx.state.client = genai.Client(vertexai=True, location="us-central1")
 
         # Set up the content generation configuration based on the state
         ctx.state.config = types.GenerateContentConfig(
             temperature=ctx.state.temperature,
-            top_p=ctx.state.top_p,
-            max_output_tokens=ctx.state.max_tokens,
             response_modalities=["TEXT"],
             safety_settings=[
                 types.SafetySetting(
@@ -64,9 +62,8 @@ class ConfigureAPI(BaseNode[GraphState]):
                     category="HARM_CATEGORY_HARASSMENT", threshold="OFF"
                 ),
             ],
-            response_mime_type=ctx.state.response_mime_type,
-            response_schema=ctx.state.response_schema,
+            response_mime_type="application/json",
         )
 
         # Return an instance of ExecuteAPI to generate content based on the configuration
-        return ExecuteAPI()
+        return Evaluate(None)
