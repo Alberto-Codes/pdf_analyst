@@ -1,5 +1,5 @@
-from pydantic import Field
 from models.doc_extraction_base import DocumentExtraction
+from pydantic import Field
 
 
 class EmployeeInfo(DocumentExtraction):

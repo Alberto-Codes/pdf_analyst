@@ -7,7 +7,8 @@ from pathlib import Path
 from config.state import GraphState
 from pydantic_graph import BaseNode, End, GraphRunContext
 
-def flatten_dict(d: dict, parent_key: str = '', sep: str = '_') -> dict:
+
+def flatten_dict(d: dict, parent_key: str = "", sep: str = "_") -> dict:
     """Flatten nested dictionary structure."""
     items = []
     for k, v in d.items():
@@ -15,7 +16,7 @@ def flatten_dict(d: dict, parent_key: str = '', sep: str = '_') -> dict:
         if isinstance(v, dict):
             items.extend(flatten_dict(v, new_key, sep=sep).items())
         elif isinstance(v, list):
-            items.append((new_key, ','.join(map(str, v))))
+            items.append((new_key, ",".join(map(str, v))))
         else:
             items.append((new_key, v))
     return dict(items)
@@ -58,7 +59,7 @@ class ExportToCSV(BaseNode[GraphState]):
                 )
                 # Flatten nested structure
                 flattened_data = flatten_dict(response_data)
-                
+
                 with open(filename, "w", newline="") as f:
                     writer = csv.DictWriter(f, fieldnames=flattened_data.keys())
                     writer.writeheader()
@@ -66,5 +67,5 @@ class ExportToCSV(BaseNode[GraphState]):
             except json.JSONDecodeError as e:
                 print(f"Error decoding JSON: {e}")
                 return End(Path(""))
-        
+
         return End(filename)
