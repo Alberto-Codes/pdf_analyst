@@ -7,6 +7,19 @@ from pathlib import Path
 from config.state import GraphState
 from pydantic_graph import BaseNode, End, GraphRunContext
 
+def flatten_dict(d: dict, parent_key: str = '', sep: str = '_') -> dict:
+    """Flatten nested dictionary structure."""
+    items = []
+    for k, v in d.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        elif isinstance(v, list):
+            items.append((new_key, ','.join(map(str, v))))
+        else:
+            items.append((new_key, v))
+    return dict(items)
+
 
 @dataclass
 class ExportToCSV(BaseNode[GraphState]):
@@ -40,19 +53,18 @@ class ExportToCSV(BaseNode[GraphState]):
 
         if ctx.state.response_text:
             try:
-                # Parse the JSON response
                 response_data = json.loads(
                     ctx.state.response_text.replace("Gemini Response: ", "")
                 )
-
+                # Flatten nested structure
+                flattened_data = flatten_dict(response_data)
+                
                 with open(filename, "w", newline="") as f:
-                    writer = csv.DictWriter(f, fieldnames=response_data.keys())
+                    writer = csv.DictWriter(f, fieldnames=flattened_data.keys())
                     writer.writeheader()
-                    writer.writerow(response_data)
-
+                    writer.writerow(flattened_data)
             except json.JSONDecodeError as e:
                 print(f"Error decoding JSON: {e}")
-                # Handle the error appropriately, e.g., log it or return an error End
-                return End(Path(""))  # Return an empty path to indicate failure
-
+                return End(Path(""))
+        
         return End(filename)

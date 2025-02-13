@@ -48,7 +48,7 @@ class ConfigureAPI(BaseNode[GraphState]):
         ctx.state.config = types.GenerateContentConfig(
             temperature=ctx.state.temperature,
             top_p=ctx.state.top_p,
-            max_output_tokens=ctx.state.max_tokens,
+            # max_output_tokens=ctx.state.max_tokens,
             response_modalities=["TEXT"],
             safety_settings=[
                 types.SafetySetting(

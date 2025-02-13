@@ -1,9 +1,90 @@
 from config.state import GraphState
 from graph.gemini_graph import gemini_graph
-from models.employee_info import EmployeeInfo
+from models.sec_filing import SecFiling
 from nodes.configure_api import ConfigureAPI
 from utils.schema_utils import get_response_schema_from_model
 
+from typing import Dict, Any
+def create_vertex_schema(pydantic_schema: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert Pydantic schema to Vertex AI compatible format."""
+    def resolve_ref(ref: str, definitions: Dict) -> Dict:
+        """Resolve $ref references in the schema."""
+        if not ref.startswith('#/$defs/'):
+            return {}
+        model_name = ref.split('/')[-1]
+        return definitions.get(model_name, {})
+
+    def convert_properties(schema_properties: Dict, definitions: Dict) -> Dict:
+        properties = {}
+        for prop_name, prop_info in schema_properties.items():
+            if "$ref" in prop_info:
+                # Handle references to other models
+                ref_model = resolve_ref(prop_info["$ref"], definitions)
+                nested_props = convert_properties(
+                    ref_model.get("properties", {}), 
+                    definitions
+                )
+                if nested_props:
+                    properties[prop_name] = {
+                        "type": "object",
+                        "properties": nested_props
+                    }
+            elif prop_info.get("type") == "object":
+                # Handle nested objects
+                nested_props = convert_properties(
+                    prop_info.get("properties", {}), 
+                    definitions
+                )
+                if nested_props:
+                    properties[prop_name] = {
+                        "type": "object",
+                        "properties": nested_props
+                    }
+            elif prop_info.get("type") == "array":
+                # Handle arrays
+                items = prop_info.get("items", {})
+                if "$ref" in items:
+                    ref_model = resolve_ref(items["$ref"], definitions)
+                    item_props = convert_properties(
+                        ref_model.get("properties", {}), 
+                        definitions
+                    )
+                    properties[prop_name] = {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": item_props
+                        }
+                    }
+                else:
+                    properties[prop_name] = {
+                        "type": "array",
+                        "items": {"type": items.get("type", "string").lower()}
+                    }
+            else:
+                # Handle primitive types
+                properties[prop_name] = {
+                    "type": prop_info.get("type", "string").lower()
+                }
+        return properties
+
+    definitions = pydantic_schema.get("$defs", {})
+    schema = {
+        "type": "object",
+        "properties": convert_properties(
+            pydantic_schema.get("properties", {}),
+            definitions
+        ),
+        "required": pydantic_schema.get("required", [])
+    }
+    
+    return schema
+
+# Debug the schema
+import json
+pydantic_schema = SecFiling.model_json_schema()
+vertex_schema = create_vertex_schema(pydantic_schema)
+print("Vertex Schema:", json.dumps(vertex_schema, indent=2))
 if __name__ == "__main__":
     """Executes the Gemini graph synchronously with an initialized state.
 
@@ -30,10 +111,22 @@ if __name__ == "__main__":
     state = GraphState(
         document_url="https://www.wellsfargo.com/assets/pdf/about/investor-relations/sec-filings/2023/10k.pdf",
         document_mime_type="application/pdf",
-        prompt="You extract data from the attached pdf. How many employees?",
+        prompt="""
+You are a document extraction expert specialized in SEC filings. Analyze the provided document and extract information according to the schema tags provided. Focus on company details, officer information, and filing metadata.
+
+For each extraction, provide:
+- Complete context with citations for found information
+- Standard null values when information isn't found (page: 0, context: "Information not found in document", confidence: 0.0)
+- Strong confidence (>0.9) for exact matches of EINs, names, dates, and titles
+- Location data (bbox) when available
+
+Pay special attention to document sections typically containing:
+- Company identifiers and legal names
+- Officer signatures and titles
+- Filing dates and attestations""",
         response_mime_type="application/json",
-        response_schema=get_response_schema_from_model(EmployeeInfo),
-        export_file_name=EmployeeInfo.__name__.lower(),
+        response_schema=vertex_schema,
+        export_file_name=SecFiling.__name__.lower(),
     )
 
     # Run the Gemini graph synchronously with the initialized state
