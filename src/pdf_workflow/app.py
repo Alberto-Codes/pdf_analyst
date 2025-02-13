@@ -1,16 +1,13 @@
-import json
-
 from config.prompt import prompt
 from config.state import GraphState
 from graph.gemini_graph import gemini_graph
 from models.sec_filing import SecFiling
 from nodes.configure_api import ConfigureAPI
 from utils.schema_utils import create_vertex_schema
-                                
 
 pydantic_schema = SecFiling.model_json_schema()
 vertex_schema = create_vertex_schema(pydantic_schema)
-print(json.dumps(vertex_schema, indent=2))
+
 if __name__ == "__main__":
     """Executes the Gemini graph synchronously with an initialized state.
 
@@ -47,3 +44,6 @@ if __name__ == "__main__":
     result, history = gemini_graph.run_sync(
         ConfigureAPI(), state=state  # Pass the state object with necessary parameters
     )
+    print(history)
+
+    gemini_graph.mermaid_save("gemini_graph_mermaid.png")

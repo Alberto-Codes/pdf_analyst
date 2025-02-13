@@ -1,11 +1,10 @@
 from datetime import date
-from typing import Dict, Optional, Union
 
 from models.company_assets import CompanyAssets
 from models.company_info import CompanyInfo
 from models.employee_info import EmployeeInfo
 from models.officer_info import OfficerInfo
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 
 
 class OcrTags(BaseModel):
@@ -40,13 +39,11 @@ class SecFiling(BaseModel):
     and employee.
 
     Attributes:
-        file_uri (HttpUrl): The URL pointing to the SEC filing document.
         mime_type (str): The MIME type of the document, default is 'application/pdf'.
         ocr_tags (OcrTags): The OCR tags associated with the document,
             containing information about the company, officer, and employee.
             Default is None.
     """
 
-    # file_uri: HttpUrl
     mime_type: str = "application/pdf"
     ocr_tags: OcrTags = None

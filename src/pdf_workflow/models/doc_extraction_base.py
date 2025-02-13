@@ -20,6 +20,6 @@ class DocumentExtraction(BaseModel):
 
     page_number: int = Field(description="Source page number in document")
     context: str = Field(description="Raw text context from source")
-    confidence_score: confloat(ge=0.0, le=1.0) = Field(
-        description="Model confidence in extraction"
+    confidence_score: float = Field(
+        description="Model confidence in extraction", ge=0.0, le=1.0
     )
