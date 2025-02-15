@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import List
 
 from google import genai
 from google.genai import types
@@ -34,7 +35,7 @@ class GraphState(BaseModel):
         response_mime_type (str | None): MIME type of the API response.
             Defaults to `None`.
         response_text (str): The generated response text. Defaults to an empty string.
-        document_url (str | None): URL of the document to be processed.
+        document_path (str | None): URL of the document to be processed.
             Defaults to `None`.
         document_mime_type (str): The document's MIME type.
             Defaults to `"application/pdf"`.
@@ -62,7 +63,7 @@ class GraphState(BaseModel):
     response_schema: Schema | None = None
     response_mime_type: str | None = None
     response_text: str = ""
-    document_url: str | None = None
+    document_path: str | None = None
     document_mime_type: str = "application/pdf"
     export_dir: Path = Path("data")
     export_file_name: str = "exported_response"

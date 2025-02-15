@@ -32,7 +32,7 @@ if __name__ == "__main__":
     """
     # Initialize the state for the content generation process
     state = GraphState(
-        document_url="https://www.wellsfargo.com/assets/pdf/about/investor-relations/sec-filings/2023/10k.pdf",
+        document_path="data/input/10k_2022.pdf",
         document_mime_type="application/pdf",
         prompt=prompt,
         response_mime_type="application/json",
