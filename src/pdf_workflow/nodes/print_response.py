@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from config.state import GraphState
 from nodes.export import ExportToCSV
-from pydantic_graph import BaseNode, End, GraphRunContext
+from pydantic_graph import BaseNode, GraphRunContext
 
 
 @dataclass
