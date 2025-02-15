@@ -1,11 +1,14 @@
 from nodes.configure_api import ConfigureAPI
+from nodes.create_prompt import CreatePrompt
 from nodes.execute_api import ExecuteAPI
 from nodes.export import ExportToCSV
 from nodes.print_response import PrintResponse
 from pydantic_graph import Graph
 
 # Create the Gemini graph
-gemini_graph = Graph(nodes=[ConfigureAPI, ExecuteAPI, PrintResponse, ExportToCSV])
+gemini_graph = Graph(
+    nodes=[ConfigureAPI, CreatePrompt, ExecuteAPI, PrintResponse, ExportToCSV]
+)
 
 """Defines the Gemini API execution graph.
 

@@ -44,6 +44,6 @@ if __name__ == "__main__":
     result, history = gemini_graph.run_sync(
         ConfigureAPI(), state=state  # Pass the state object with necessary parameters
     )
-    print(history)
+    print(result)
 
     gemini_graph.mermaid_save("gemini_graph_mermaid.png")

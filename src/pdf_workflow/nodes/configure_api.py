@@ -3,48 +3,42 @@ from dataclasses import dataclass
 from config.state import GraphState
 from google import genai
 from google.genai import types
-from nodes.execute_api import ExecuteAPI
+from nodes.create_prompt import CreatePrompt
 from pydantic_graph import BaseNode, GraphRunContext
 
 
 @dataclass
 class ConfigureAPI(BaseNode[GraphState]):
-    """Configure the API request for generating content.
+    """Configures the Gemini API client for content generation.
 
-    This class is responsible for setting up the configuration for the
-    Gemini API client. It retrieves the configuration from the `GraphState`
-    and uses it to initialize the necessary settings for content generation.
-    The `run` method sets up the Gemini client, defines content generation
-    parameters, and configures safety settings to ensure appropriate content.
+    This node initializes the Gemini API client and sets up the content
+    generation parameters using values from `GraphState`. It also configures
+    safety settings to filter out inappropriate content.
 
     Attributes:
-        None directly, as the configuration is managed by the `GraphState`
-        and passed through the `ctx.state` in the `run` method. The class
-        relies on the context to access the required configuration parameters.
+        None directly, as all configurations are managed via `GraphState`
+        and accessed through `ctx.state` during execution.
     """
 
-    async def run(self, ctx: GraphRunContext[GraphState]) -> ExecuteAPI:
-        """Run the configuration setup for the Gemini API.
+    async def run(self, ctx: GraphRunContext[GraphState]) -> CreatePrompt:
+        """Sets up the Gemini API client and generation parameters.
 
-        This method uses the `GraphState` from the context to configure the
-        Gemini client and set up the content generation parameters, including
-        temperature, top_p, max_tokens, response MIME type, and response schema.
-        Additionally, it configures safety settings for content filtering
-        to avoid harmful or inappropriate content.
+        This method initializes the Gemini client and configures the content
+        generation settings, including temperature, top_p, response format,
+        and safety settings. These configurations are stored in `GraphState`
+        for later use in content generation.
 
         Args:
-            ctx (GraphRunContext[GraphState]): The context containing the
-                graph state, which holds the configuration parameters needed
-                to set up the Gemini client and content generation settings.
+            ctx (GraphRunContext[GraphState]): The execution context containing
+                `GraphState`, which holds configuration parameters.
 
         Returns:
-            ExecuteAPI: An instance of the `ExecuteAPI` node, which will
-                execute the content generation using the configured settings.
+            CreatePrompt: The next node responsible for prompt creation.
         """
-        # Initialize the Gemini client using the state location
+        # Initialize the Gemini API client
         ctx.state.client = genai.Client(vertexai=True, location=ctx.state.location)
 
-        # Set up the content generation configuration based on the state
+        # Configure content generation settings
         ctx.state.config = types.GenerateContentConfig(
             temperature=ctx.state.temperature,
             top_p=ctx.state.top_p,
@@ -68,5 +62,5 @@ class ConfigureAPI(BaseNode[GraphState]):
             response_schema=ctx.state.response_schema,
         )
 
-        # Return an instance of ExecuteAPI to generate content based on the configuration
-        return ExecuteAPI()
+        # Proceed to the next node for prompt creation
+        return CreatePrompt()
