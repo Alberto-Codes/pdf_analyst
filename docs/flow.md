@@ -44,3 +44,50 @@ flowchart TD
     %% Style Definitions
     classDef document fill:#f9f,stroke:#333,stroke-width:2px;
 ```
+
+Platformed might look like this
+```mermaid
+flowchart TD
+    %% Local Laptop PC Subgraph
+    subgraph Local_Laptop_PC ["Local Laptop PC"]
+        direction TB
+
+        %% SQLite Databases Subgraph
+        subgraph SQLite_Databases ["SQLite Databases"]
+            B[(inputs)]
+            D[(documents)]
+            I[(ocr_tags)]
+        end
+
+        %% Processes and Data Inputs
+        start((Start))
+        A[/Accounts and Dates CSV/]
+        C[Discover Related doc_ids]
+        E{{System Prompt}}
+        F{{JSON Schema}}
+        G[Build API Call]
+        finish((Finish))
+    end
+
+    %% Google Cloud Platform (GCP) Subgraph
+    subgraph GCP ["Google Cloud Platform"]
+        direction TB
+
+        %% Vertex AI Subgraph
+        subgraph VertexAI ["Vertex AI"]
+            H[Vertex AI Gemini 1.5 Endpoint]
+        end
+    end
+
+    %% Data Flow
+    start --> A
+    A --> |Insert Data| B
+    B --> |Select Account and Date| C
+    C --> |Insert doc_ids| D
+    D --> |Select doc_id and doc_id_url| G
+    E --> G
+    F --> G
+    G --> |Send API Request| H
+    H --> |Return ocr_tags| I
+    I --> finish
+```
