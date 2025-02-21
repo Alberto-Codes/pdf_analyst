@@ -112,9 +112,10 @@ flowchart TD
         C[Discover Related doc_ids]
         J[Download Documents]
         L{{Local Documents Directory}}
+        M[Retrieve and Encode Document]
         E[System Prompt]
         F[JSON Schema]
-        G[Build API Call]
+        G[Build API Call with Encoded File]
         finish((Finish))
     end
 
@@ -135,10 +136,12 @@ flowchart TD
     C --> |Retrieve doc_ids| J
     J --> |Download to Local Directory| L
     L --> |Store doc_id and File Path| D
-    D --> |Select doc_id and File Path| G
+    D --> |Fetch doc_id and File Path| M
+    M --> |Encode to Byte Array| G
     E --> G
     F --> G
-    G --> |Send API Request| H
+    G --> |Send API Request with Encoded File| H
     H --> |Return ocr_tags| I
     I --> finish
+
 ```
