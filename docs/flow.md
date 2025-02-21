@@ -145,3 +145,55 @@ flowchart TD
     I --> finish
 
 ```
+if we are provisioned a gcp database
+```mermaid
+flowchart TD
+    %% Local Laptop PC Subgraph
+    subgraph Local_Laptop_PC ["Local Laptop PC"]
+        direction TB
+
+        %% Processes and Data Inputs
+        start((Start))
+        A[/Accounts and Dates CSV/]
+        C[Discover Related doc_ids]
+        J[Download Documents]
+        L{{Local Documents Directory}}
+        M[Retrieve and Encode Document]
+        E[System Prompt]
+        F[JSON Schema]
+        G[Build API Call with Encoded File]
+        finish((Finish))
+    end
+
+    %% Google Cloud Platform (GCP) Subgraph
+    subgraph GCP ["Google Cloud Platform"]
+        direction TB
+
+        %% PostgreSQL Databases Subgraph
+        subgraph PostgreSQL_Databases ["PostgreSQL Databases"]
+            B[(inputs)]
+            D[(documents)]
+            I[(ocr_tags)]
+        end
+
+        %% Vertex AI Subgraph
+        subgraph VertexAI ["Vertex AI"]
+            H[Vertex AI Gemini 1.5 Endpoint]
+        end
+    end
+
+    %% Data Flow
+    start --> A
+    A --> |Insert Data| B
+    B --> |Select Account and Date| C
+    C --> |Retrieve doc_ids| J
+    J --> |Download to Local Directory| L
+    L --> |Store doc_id and File Path| D
+    D --> |Fetch doc_id and File Path| M
+    M --> |Encode to Byte Array| G
+    E --> G
+    F --> G
+    G --> |Send API Request with Encoded File| H
+    H --> |Return ocr_tags| I
+    I --> finish
+```
