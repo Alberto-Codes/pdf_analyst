@@ -91,3 +91,54 @@ flowchart TD
     H --> |Return ocr_tags| I
     I --> finish
 ```
+
+we need to manifiest the files locally and then send to api
+```mermaid
+flowchart TD
+    %% Local Laptop PC Subgraph
+    subgraph Local_Laptop_PC ["Local Laptop PC"]
+        direction TB
+
+        %% SQLite Databases Subgraph
+        subgraph SQLite_Databases ["SQLite Databases"]
+            B[(inputs)]
+            D[(documents)]
+            I[(ocr_tags)]
+        end
+
+        %% Processes and Data Inputs
+        start((Start))
+        A[/Accounts and Dates CSV/]
+        C[Discover Related doc_ids]
+        J[Download Documents]
+        L{{Local Documents Directory}}
+        E[System Prompt]
+        F[JSON Schema]
+        G[Build API Call]
+        finish((Finish))
+    end
+
+    %% Google Cloud Platform (GCP) Subgraph
+    subgraph GCP ["Google Cloud Platform"]
+        direction TB
+
+        %% Vertex AI Subgraph
+        subgraph VertexAI ["Vertex AI"]
+            H[Vertex AI Gemini 1.5 Endpoint]
+        end
+    end
+
+    %% Data Flow
+    start --> A
+    A --> |Insert Data| B
+    B --> |Select Account and Date| C
+    C --> |Retrieve doc_ids| J
+    J --> |Download to Local Directory| L
+    L --> |Store doc_id and File Path| D
+    D --> |Select doc_id and File Path| G
+    E --> G
+    F --> G
+    G --> |Send API Request| H
+    H --> |Return ocr_tags| I
+    I --> finish
+```
