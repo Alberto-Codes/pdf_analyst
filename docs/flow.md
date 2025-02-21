@@ -251,3 +251,59 @@ flowchart TD
     H --> |Return ocr_tags| I
     I --> finish
 ```
+if we get a cloud run or cloud function
+```mermaid
+flowchart TD
+    %% Local Laptop PC Subgraph
+    subgraph Local_Laptop_PC ["Local Laptop PC"]
+        direction TB
+        start((Start))
+        A[/Accounts and Dates CSV/]
+        C[Discover Related doc_ids]
+        J[Initiate Document Upload]
+        finish((Finish))
+    end
+
+    %% Google Cloud Platform (GCP) Subgraph
+    subgraph GCP ["Google Cloud Platform"]
+        direction TB
+
+        %% Cloud Run Subgraph
+        subgraph Cloud_Run ["Cloud Run Service"]
+            E[System Prompt]
+            F[JSON Schema]
+            G[Build and Send API Request]
+        end
+
+        %% GCP Storage Subgraph
+        subgraph GCP_Storage ["GCP Storage"]
+            L[/"GCP Storage Bucket"/]
+        end
+
+        %% PostgreSQL Databases Subgraph
+        subgraph PostgreSQL_Databases ["PostgreSQL Databases"]
+            B[(inputs)]
+            D[(documents)]
+            I[(ocr_tags)]
+        end
+
+        %% Vertex AI Subgraph
+        subgraph VertexAI ["Vertex AI"]
+            H[Vertex AI Gemini 1.5 Endpoint]
+        end
+    end
+
+    %% Data Flow
+    start --> A
+    A --> |Insert Data| B
+    B --> |Select Account and Date| C
+    C --> |Retrieve doc_ids| J
+    J --> |Upload to GCP Bucket| L
+    L --> |Store doc_id and file_url| D
+    D --> |Fetch doc_id and file_url| G
+    E --> G
+    F --> G
+    G --> |Send API Request with file_url| H
+    H --> |Return ocr_tags| I
+    I --> finish
+```
