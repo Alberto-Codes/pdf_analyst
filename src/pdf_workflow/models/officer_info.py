@@ -1,4 +1,4 @@
-from models.doc_extraction_base import DocumentExtraction
+from pdf_workflow.models.doc_extraction_base import DocumentExtraction
 from pydantic import Field, HttpUrl
 
 
@@ -14,3 +14,4 @@ class OfficerInfo(DocumentExtraction):
     signer_name: str = Field(description="Name of signing officer")
     signer_title: str = Field(description="Title of signing officer")
     date_signed: str = Field(description="Date document was signed")
+

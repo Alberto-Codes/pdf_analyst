@@ -1,9 +1,9 @@
 from datetime import date
 
-from models.company_assets import CompanyAssets
-from models.company_info import CompanyInfo
-from models.employee_info import EmployeeInfo
-from models.officer_info import OfficerInfo
+from pdf_workflow.models.company_assets import CompanyAssets
+from pdf_workflow.models.company_info import CompanyInfo
+from pdf_workflow.models.employee_info import EmployeeInfo
+from pdf_workflow.models.officer_info import OfficerInfo
 from pydantic import BaseModel
 
 
@@ -47,3 +47,4 @@ class SecFiling(BaseModel):
 
     mime_type: str = "application/pdf"
     ocr_tags: OcrTags = None
+

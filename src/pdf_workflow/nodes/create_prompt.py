@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from config.state import GraphState
+from pdf_workflow.config.state import GraphState
 from google.genai import types
-from nodes.execute_api import ExecuteAPI
+from pdf_workflow.nodes.execute_api import ExecuteAPI
 from pydantic_graph import BaseNode, GraphRunContext
 
 
@@ -50,3 +50,4 @@ class CreatePrompt(BaseNode[GraphState]):
         ctx.state.contents = contents
 
         return ExecuteAPI()
+

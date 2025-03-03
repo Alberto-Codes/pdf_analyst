@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from config.state import GraphState
-from nodes.export import ExportToCSV
+from pdf_workflow.config.state import GraphState
+from pdf_workflow.nodes.export import ExportToCSV
 from pydantic_graph import BaseNode, GraphRunContext
 
 
@@ -38,3 +38,4 @@ class PrintResponse(BaseNode[GraphState]):
 
         # Return the next node in the execution flow
         return ExportToCSV()
+

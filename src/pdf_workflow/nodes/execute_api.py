@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from config.state import GraphState
-from nodes.print_response import PrintResponse
+from pdf_workflow.config.state import GraphState
+from pdf_workflow.nodes.print_response import PrintResponse
 from pydantic_graph import BaseNode, GraphRunContext
 
 
@@ -39,3 +39,4 @@ class ExecuteAPI(BaseNode[GraphState]):
         ctx.state.response_text = response.text
 
         return PrintResponse()
+

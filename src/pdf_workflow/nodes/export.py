@@ -1,10 +1,11 @@
 import csv
 import json
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from config.state import GraphState
+from pdf_workflow.config.state import GraphState
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 
@@ -51,12 +52,23 @@ class ExportToCSV(BaseNode[GraphState]):
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = export_dir / f"{ctx.state.export_file_name}_{timestamp}.csv"
+        print(f"Exporting to CSV file: {filename}")
 
         if ctx.state.response_text:
             try:
-                response_data = json.loads(
-                    ctx.state.response_text.replace("Gemini Response: ", "")
-                )
+                # Improved JSON extraction
+                # First remove 'Gemini Response: ' prefix if present
+                response_text = ctx.state.response_text
+                if 'Gemini Response:' in response_text:
+                    response_text = re.sub(r'^Gemini Response:\s*', '', response_text.strip())
+                
+                # Extract JSON from the text (looking for text between curly braces)
+                json_match = re.search(r'({.*})', response_text, re.DOTALL)
+                if json_match:
+                    response_text = json_match.group(1)
+                
+                response_data = json.loads(response_text)
+                
                 # Flatten nested structure
                 flattened_data = flatten_dict(response_data)
 
@@ -64,8 +76,16 @@ class ExportToCSV(BaseNode[GraphState]):
                     writer = csv.DictWriter(f, fieldnames=flattened_data.keys())
                     writer.writeheader()
                     writer.writerow(flattened_data)
+                    
+                print(f"Successfully exported data to {filename}")
+                
             except json.JSONDecodeError as e:
                 print(f"Error decoding JSON: {e}")
+                print(f"Problematic text: {response_text}")
                 return End(Path(""))
+        else:
+            print("No response text to export")
+            return End(Path(""))
 
         return End(filename)
+

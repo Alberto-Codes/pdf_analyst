@@ -1,4 +1,4 @@
-from models.doc_extraction_base import DocumentExtraction
+from pdf_workflow.models.doc_extraction_base import DocumentExtraction
 from pydantic import Field
 
 
@@ -13,3 +13,4 @@ class EmployeeInfo(DocumentExtraction):
 
     total_employees: int = Field(description="Total number of employees")
     year: int = Field(description="Year of the employee count")
+

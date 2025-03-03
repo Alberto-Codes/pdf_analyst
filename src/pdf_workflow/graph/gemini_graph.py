@@ -1,9 +1,9 @@
-from nodes.configure_api import ConfigureAPI
-from nodes.create_prompt import CreatePrompt
-from nodes.execute_api import ExecuteAPI
-from nodes.export import ExportToCSV
-from nodes.print_response import PrintResponse
-from nodes.sanitize_prompt import SanitizePrompt
+from pdf_workflow.nodes.configure_api import ConfigureAPI
+from pdf_workflow.nodes.create_prompt import CreatePrompt
+from pdf_workflow.nodes.execute_api import ExecuteAPI
+from pdf_workflow.nodes.export import ExportToCSV
+from pdf_workflow.nodes.print_response import PrintResponse
+from pdf_workflow.nodes.sanitize_prompt import SanitizePrompt
 from pydantic_graph import Graph
 
 """Defines the Gemini API execution graph.
@@ -25,3 +25,4 @@ gemini_graph = Graph(
         ExportToCSV
     ]
 )
+

@@ -1,9 +1,12 @@
 from dataclasses import dataclass
+import os
+import logging
+import sys
 
-from config.state import GraphState
+from pdf_workflow.config.state import GraphState
 from google import genai
 from google.genai import types
-from nodes.create_prompt import CreatePrompt
+from pdf_workflow.nodes.create_prompt import CreatePrompt
 from pydantic_graph import BaseNode, GraphRunContext
 
 
@@ -35,9 +38,27 @@ class ConfigureAPI(BaseNode[GraphState]):
         Returns:
             CreatePrompt: The next node responsible for prompt creation.
         """
+        # Check credentials file exists
+        creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+        if creds_path:
+            if not os.path.isabs(creds_path):
+                # Make absolute path if relative
+                creds_path = os.path.abspath(creds_path)
+                os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+            
+            print(f"Using credentials file: {creds_path}")
+            if not os.path.exists(creds_path):
+                print(f"Error: Credentials file not found at {creds_path}")
+                print("Cannot continue without valid credentials.")
+                sys.exit(1)
+        else:
+            print("Error: GOOGLE_APPLICATION_CREDENTIALS environment variable not set")
+            print("Cannot continue without valid credentials.")
+            sys.exit(1)
+
         # Initialize the Gemini API client
         ctx.state.client = genai.Client(vertexai=True, location=ctx.state.location)
-
+            
         # Configure content generation settings
         ctx.state.config = types.GenerateContentConfig(
             temperature=ctx.state.temperature,
@@ -64,3 +85,4 @@ class ConfigureAPI(BaseNode[GraphState]):
 
         # Proceed to the next node for prompt creation
         return CreatePrompt()
+

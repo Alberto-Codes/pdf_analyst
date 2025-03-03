@@ -1,7 +1,7 @@
 from decimal import Decimal
 from typing import List
 
-from models.doc_extraction_base import DocumentExtraction
+from pdf_workflow.models.doc_extraction_base import DocumentExtraction
 from pydantic import BaseModel, Field
 
 
@@ -35,3 +35,4 @@ class CompanyAssets(BaseModel):
     assets: List[Asset] = Field(
         default_factory=list, description="List of company assets"
     )
+

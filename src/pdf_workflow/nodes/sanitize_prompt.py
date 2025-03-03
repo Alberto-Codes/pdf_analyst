@@ -2,9 +2,9 @@ from typing import Any, Dict
 from dataclasses import dataclass
 from google.genai import types
 from pydantic_graph import BaseNode, GraphRunContext, End
-from nodes.execute_api import ExecuteAPI
-from utils.model_armor.sanitize_prompt import ModelArmorSanitizer
-from config.state import GraphState
+from pdf_workflow.nodes.execute_api import ExecuteAPI
+from pdf_workflow.utils.model_armor.sanitize_prompt import ModelArmorSanitizer
+from pdf_workflow.config.state import GraphState
 
 FILTER_ERROR_MESSAGES = {
     "rai": "Responsible AI concerns detected",
