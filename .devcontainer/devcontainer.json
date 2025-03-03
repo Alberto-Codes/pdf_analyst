@@ -36,7 +36,8 @@
                 "eamodio.gitlens",
                 "mtxr.sqltools",
                 "mechatroner.rainbow-csv",
-                "mtxr.sqltools-driver-sqlite"
+                "mtxr.sqltools-driver-sqlite",
+                "ms-vscode.PowerShell"
             ]
         }
     }
