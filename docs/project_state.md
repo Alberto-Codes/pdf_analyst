@@ -38,6 +38,7 @@ The primary use case identified is LLM-driven OCR workflow for information extra
 
 - `data/`: Directory for input and output data
 - `docs/`: Project documentation
+- `*.ps1`: PowerShell scripts for installation, running, and testing
 
 ## Technical Stack
 
@@ -49,6 +50,7 @@ The primary use case identified is LLM-driven OCR workflow for information extra
 - **Development Tools**:
   - `black`: Code formatting
   - `isort`: Import sorting
+  - `pipenv`: Virtual environment and dependency management
 
 ## Processing Flow
 
@@ -71,9 +73,17 @@ The system uses a hierarchical data model with:
   - `EmployeeInfo`: Employee-related information
   - `CompanyAssets`: Company asset information
 
+## Recent Improvements
+
+- **Import Structure**: Converted relative imports to absolute imports throughout the codebase for better maintainability
+- **Path Handling**: Implemented robust absolute path handling for credentials and data files
+- **Installation**: Added proper Python package setup with setup.py and editable installation
+- **Automation**: Created PowerShell scripts for development setup, running the application, and testing
+- **Error Handling**: Enhanced error detection and reporting for file operations and API calls
+
 ## Current State and Next Steps
 
-The project appears to be a functional workflow for extracting specific information from PDF documents, with a focus on financial documents from the SEC. The codebase is well-structured with clear separation of concerns between data models, processing nodes, and workflow management.
+The project is a functional workflow for extracting specific information from PDF documents, with a focus on financial documents from the SEC. The codebase is well-structured with clear separation of concerns and improved reliability through better path handling and import structures.
 
 Potential next steps might include:
 - Expanding data extraction capabilities to additional document types
