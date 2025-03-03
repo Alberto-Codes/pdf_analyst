@@ -1,152 +1,161 @@
-# User Story: Dedicated File Encoding Node for Async Processing
+# User Story: Async-First Codebase for Batch Processing
 
 ## Story
 
-**As a** data analyst working with SEC filings,  
-**I want to** have PDF file encoding in a dedicated workflow node,  
-**So that** I can optimize the processing pipeline for async operations and batch processing in the future.
+**As a** data analyst processing multiple SEC filings,  
+**I want** the entire PDF Analyst workflow to operate in a fully asynchronous manner,  
+**So that** I can efficiently process batches of files in parallel and maximize throughput.
 
 ## Business Value
 
-By implementing a dedicated file encoding node in the workflow:
-- We can isolate resource-intensive encoding operations from other processing steps
-- Prepare the architecture for future asynchronous processing capabilities
-- Enable better memory management during batch processing of multiple documents
-- Provide a clear separation of concerns in the workflow, making it more maintainable
-- Support better error handling and retries specific to file handling
+By transforming the codebase to an async-first architecture:
+- We can process batches of files in parallel, significantly reducing total processing time
+- Improve resource utilization by not blocking during I/O operations
+- Enhance scalability for higher volume document processing
+- Support processing of larger datasets without performance degradation
+- Enable more responsive user interfaces during long-running operations
+- Provide better progress tracking and cancellation capabilities for batch operations
 
 ## Acceptance Criteria (Gherkin)
 
-### Feature: Dedicated File Encoding Node in PDF Processing Workflow
+### Feature: Fully Asynchronous PDF Processing Workflow
 
-#### Scenario 1: Encode a PDF file in a dedicated node ✅
-**Given** I have a PDF document located in the `data/input` directory  
-**When** I run the PDF Analyst application  
-**Then** the file should be processed by a dedicated `EncodeFileNode`  
-**And** the encoded file content should be added to the workflow state  
-**And** the processing should continue to the next node
+#### Scenario 1: Process a batch of files concurrently
+**Given** I have multiple PDF documents in the `data/input` directory  
+**When** I run the PDF Analyst application in batch mode  
+**Then** the files should be processed concurrently  
+**And** the system should manage memory and resources efficiently  
+**And** I should receive aggregated results for all processed files
 
-#### Scenario 2: Handle large files efficiently ✅
-**Given** I have a large PDF document to process  
-**When** the `EncodeFileNode` processes the file  
-**Then** it should manage memory efficiently during encoding  
-**And** provide progress feedback for large files  
-**And** continue the workflow without memory issues
+#### Scenario 2: Monitor progress of batch processing
+**Given** I am running the PDF Analyst application on a batch of files  
+**When** the processing is underway  
+**Then** I should receive real-time progress updates  
+**And** see estimated completion time for the entire batch  
+**And** be able to identify which files are currently being processed
 
-#### Scenario 3: Error handling during file encoding ✅
-**Given** I attempt to process an invalid or corrupted PDF file  
-**When** the `EncodeFileNode` processes the file  
-**Then** it should detect and handle the error gracefully  
-**And** provide clear error messages about the failure  
-**And** update the workflow state with error details
+#### Scenario 3: Cancel batch processing operations
+**Given** I have started batch processing of PDF documents  
+**When** I initiate a cancellation request  
+**Then** the system should gracefully cancel all in-progress operations  
+**And** preserve the results of already completed files  
+**And** provide a summary of completed, canceled, and failed operations
 
-#### Scenario 4: Prepare for batch processing ✅
-**Given** I have multiple PDF documents to process  
-**When** I configure the application for batch processing  
-**Then** the `EncodeFileNode` should be ready to handle sequential or parallel encoding  
-**And** manage resources appropriately across multiple files
+#### Scenario 4: Handle errors without stopping the entire batch
+**Given** I am processing a batch containing some problematic PDF files  
+**When** the system encounters errors with specific files  
+**Then** it should continue processing the remaining files  
+**And** log detailed error information for the problematic files  
+**And** provide a complete summary of successful and failed operations
 
 ## Technical Implementation Tasks
 
-### 1. Create New EncodeFileNode ✅
-- [x] Design and implement `EncodeFileNode` class
-  - [x] Add file validation and size checking
-  - [x] Implement efficient file reading and encoding
-  - [x] Handle various file encoding errors
-  - [x] Support progress tracking for large files
-- [x] Update `GraphState` to store encoded file content
-  - [x] Add fields for tracking encoding status and metrics
+### 1. Refactor Remaining Nodes for Async Execution
+- [ ] Update all workflow nodes to use consistent async patterns
+  - [ ] Convert synchronous operations to async where appropriate
+  - [ ] Implement proper exception handling in async context
+  - [ ] Add cancellation support to all long-running operations
+- [ ] Ensure all external API calls use async clients
+  - [ ] Update Google API clients to async versions
+  - [ ] Add timeouts and retry mechanisms for resiliency
 
-### 2. Modify Existing Graph Structure ✅
-- [x] Update `gemini_graph.py` to include the new encoding node
-  - [x] Position `EncodeFileNode` between `ConfigureAPI` and `CreatePrompt`
-  - [x] Ensure proper state handoff between nodes
-- [x] Modify `CreatePrompt` to use pre-encoded content from state
+### 2. Implement Batch Processing Controller
+- [ ] Design BatchProcessor class to manage multiple file processing
+  - [ ] Develop file discovery and validation mechanisms
+  - [ ] Implement worker pool for parallel processing
+  - [ ] Create batch-level metrics collection
+- [ ] Build rate limiting and throttling mechanisms
+  - [ ] Add configurable concurrency limits
+  - [ ] Implement adaptive throttling based on system resources
 
-### 3. Async Foundations ✅
-- [x] Implement the node with async-compatible architecture
-  - [x] Design helper methods with async signatures for future expansion
-  - [x] Create extensible strategies for different file sizes
-- [x] Add cancellation support for long-running encoding operations
+### 3. Enhance GraphState for Batch Context
+- [ ] Extend GraphState to support batch operations
+  - [ ] Add batch identity and tracking information
+  - [ ] Design aggregate result structures
+  - [ ] Implement batch-level error handling
+- [ ] Create progress monitoring capabilities
+  - [ ] Build event system for progress updates
+  - [ ] Add timing and estimation features
 
-### 4. Memory Optimization ✅
-- [x] Define file size thresholds for different encoding strategies
-- [x] Add hooks for future implementation of streaming file encoding for large files
-- [x] Add memory usage monitoring through detailed metrics
+### 4. Update Application Interface
+- [ ] Enhance CLI to support batch operations
+  - [ ] Add batch-specific command line options
+  - [ ] Implement interactive progress display
+  - [ ] Create batch result summary reporting
+- [ ] Update configuration handling
+  - [ ] Add batch processing configuration options
+  - [ ] Support per-file override configurations
 
-### 5. Testing ✅
-- [x] Create unit tests for the new encoding node
-  - [x] Test with various file sizes and types
-  - [x] Test error handling and edge cases
-- [x] Add integration tests for the entire workflow with the new node
-- [x] Set up comprehensive test automation
-  - [x] Implement PowerShell test script with HTML coverage reporting
-  - [x] Support for running specific test suites or all tests
-- [x] Manual testing with the application ✅
-  - Successfully tested with actual PDF file processing
-  - Verified metrics collection and performance
+### 5. Testing Infrastructure
+- [ ] Update testing framework for async tests
+  - [ ] Enhance PowerShell test scripts to handle async tests properly
+  - [ ] Add batch-specific test scenarios
+  - [ ] Implement mock batch data for testing
+- [ ] Create performance testing suite
+  - [ ] Build benchmarking tools for batch operations
+  - [ ] Implement concurrency stress tests
+  - [ ] Add resource utilization tracking to tests
 
-### 6. Documentation ✅
-- [x] Document the new node and its configuration options
-- [x] Add clear explanation of encoding behavior and strategies
-- [x] Provide comprehensive docstrings following Google Python style guide
+### 6. Debug and Monitoring Tools
+- [ ] Update local development scripts for async debugging
+  - [ ] Create specialized debugging modes for async code
+  - [ ] Add detailed logging for async operations
+  - [ ] Implement visualization tools for async execution flow
+- [ ] Enhance operational monitoring
+  - [ ] Add batch operation metrics collection
+  - [ ] Create dashboard for batch processing status
+  - [ ] Implement alerting for batch failures
 
-## Implementation Notes
+## Implementation Approach
 
-The implementation is now complete with the following key features:
+The implementation will build on the foundation established with the `EncodeFileNode`, which already has async-compatible architecture:
 
-1. **Dedicated EncodeFileNode**: The node validates file existence, reads the file content based on size strategy, and stores both encoded content and performance metrics in the GraphState.
+1. **Gradual Migration**: Convert each component of the system to async patterns, starting with the most I/O-intensive operations.
 
-2. **Error Handling**: Comprehensive error detection and handling for file operations with clear messages and metrics.
+2. **Unified Pattern**: Use consistent async patterns across the codebase, leveraging Python's `asyncio` library and modern async/await syntax.
 
-3. **Performance Tracking**: Timing and file size metrics are recorded to track encoding performance.
+3. **Resource Management**: Implement proper resource pools with configurable limits to prevent overloading the system during parallel processing.
 
-4. **Size-based Strategies**: The encoding operation adapts to file size (currently two strategies, with a 10MB threshold), providing a foundation for more sophisticated future optimizations.
+4. **Error Isolation**: Ensure errors in one file's processing don't affect other files in the batch, with comprehensive error reporting.
 
-5. **Logging**: Detailed logging throughout the encoding process for better monitoring and debugging.
+5. **Test-Driven Approach**: Develop comprehensive async test cases before implementing each component to ensure correct behavior.
 
-6. **Async Foundation**: All encoding methods are designed for async compatibility, making future asynchronous processing straightforward to implement.
+6. **Monitoring First**: Build detailed monitoring and progress reporting from the beginning to provide visibility into the async operations.
 
-7. **Cancellation Support**: Implemented timeout-based cancellation for both small and large file encoding operations, ensuring long-running operations don't block the workflow indefinitely.
-
-8. **Testing Coverage**: Comprehensive unit and integration tests for all aspects of the EncodeFileNode, including various file sizes, error handling, and metrics calculation.
-
-## File Structure
-
-The main implementation is organized as follows:
+## Proposed Architecture
 
 ```python
-# In encode_file.py
-class EncodeFileNode(BaseNode[GraphState]):
-    # File size threshold in MB for different encoding strategies
-    SMALL_FILE_THRESHOLD_MB: float = 10.0
+# BatchProcessor.py
+class BatchProcessor:
+    """Manages batch processing of multiple files through the workflow."""
     
-    # Timeout for encoding operations in seconds
-    ENCODING_TIMEOUT_SECONDS: float = 60.0
+    def __init__(self, config: BatchConfig, max_concurrent: int = 5):
+        self.config = config
+        self.worker_pool = WorkerPool(max_concurrent)
+        self.results = BatchResults()
     
-    async def run(self, ctx: GraphRunContext[GraphState]) -> CreatePrompt:
-        # Implementation of the encoding workflow
-        # ...
+    async def process_directory(self, input_dir: Path) -> BatchResults:
+        """Process all valid files in a directory concurrently."""
+        files = self._discover_files(input_dir)
+        return await self.process_files(files)
     
-    async def _encode_small_file(self, filepath: Path) -> bytes:
-        # Method for handling small files with cancellation support
-        # ...
+    async def process_files(self, files: List[Path]) -> BatchResults:
+        """Process a specific list of files concurrently."""
+        tasks = [self._process_single_file(file) for file in files]
+        return await self._gather_with_progress(tasks)
     
-    async def _encode_large_file(self, filepath: Path) -> bytes:
-        # Method for handling large files with cancellation support
-        # ...
-    
-    def _finish_encoding_metrics(self, metrics: Dict[str, Any]) -> None:
-        # Updates the metrics after encoding completes
-        # ...
+    async def _process_single_file(self, file_path: Path) -> FileResult:
+        """Process a single file through the workflow."""
+        # Implementation with proper error handling and metrics
 ```
 
 ## Definition of Done
 
-- [x] `EncodeFileNode` is implemented and integrated into the workflow
-- [x] File encoding is performed efficiently for various file sizes
-- [x] The node provides proper error handling and reporting
-- [x] The architecture supports future async operations
-- [x] Tests verify correct behavior in all scenarios
-- [x] Documentation is updated to reflect the new workflow architecture
-- [x] The solution is more maintainable than the previous approach 
+- [ ] All components of the system operate asynchronously
+- [ ] Batch processing capability is fully implemented and tested
+- [ ] The system can efficiently handle multiple files concurrently
+- [ ] Progress monitoring and cancellation support is available throughout
+- [ ] Testing infrastructure supports async testing scenarios
+- [ ] Debugging tools provide visibility into async execution
+- [ ] Performance metrics demonstrate improved throughput for batch operations
+- [ ] Documentation is updated to reflect the async architecture 
