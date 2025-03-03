@@ -1,5 +1,6 @@
 # Cursor settings
 .cursorrules
+.cursor
 
 # GCP credentials
 google_application_credentials.json
