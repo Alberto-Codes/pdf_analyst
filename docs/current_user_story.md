@@ -1,153 +1,177 @@
-# User Story: Direct File Integration with Gemini API
+# User Story: Dedicated File Encoding Node for Async Processing
 
 ## Story
 
 **As a** data analyst working with SEC filings,  
-**I want to** upload PDF files directly to the Gemini API instead of encoding them,  
-**So that** I can process larger documents more efficiently and reduce the complexity of the application.
+**I want to** have PDF file encoding in a dedicated workflow node,  
+**So that** I can optimize the processing pipeline for async operations and batch processing in the future.
 
 ## Business Value
 
-By implementing direct file upload and management through the Gemini API's file features, we can:
-- Handle larger documents that might exceed encoding limits
-- Improve processing speed by avoiding base64 encoding/decoding overhead
-- Simplify the codebase by delegating file management to the API
-- Reduce memory usage during document processing
+By implementing a dedicated file encoding node in the workflow:
+- We can isolate resource-intensive encoding operations from other processing steps
+- Prepare the architecture for future asynchronous processing capabilities
+- Enable better memory management during batch processing of multiple documents
+- Provide a clear separation of concerns in the workflow, making it more maintainable
+- Support better error handling and retries specific to file handling
 
 ## Acceptance Criteria (Gherkin)
 
-### Feature: PDF File Upload and Processing via Gemini API
+### Feature: Dedicated File Encoding Node in PDF Processing Workflow
 
-#### Scenario 1: Upload a PDF file to Gemini API
+#### Scenario 1: Encode a PDF file in a dedicated node
 **Given** I have a PDF document located in the `data/input` directory  
 **When** I run the PDF Analyst application  
-**Then** the file should be uploaded to Gemini API  
-**And** the application should receive a file ID  
-**And** the file ID should be stored for future reference
+**Then** the file should be processed by a dedicated `EncodeFileNode`  
+**And** the encoded file content should be added to the workflow state  
+**And** the processing should continue to the next node
 
-#### Scenario 2: Process an uploaded file
-**Given** I have uploaded a PDF document to Gemini API  
-**When** I execute the processing workflow  
-**Then** the application should reference the file by ID instead of encoding it  
-**And** the Gemini API should extract information according to the prompt  
-**And** the extracted information should be returned in the expected format
+#### Scenario 2: Handle large files efficiently
+**Given** I have a large PDF document to process  
+**When** the `EncodeFileNode` processes the file  
+**Then** it should manage memory efficiently during encoding  
+**And** provide progress feedback for large files  
+**And** continue the workflow without memory issues
 
-#### Scenario 3: Delete a processed file
-**Given** I have processed a PDF document using the Gemini API  
-**When** the processing workflow completes  
-**Then** the application should delete the file from Gemini API  
-**And** confirm the deletion was successful
+#### Scenario 3: Error handling during file encoding
+**Given** I attempt to process an invalid or corrupted PDF file  
+**When** the `EncodeFileNode` processes the file  
+**Then** it should detect and handle the error gracefully  
+**And** provide clear error messages about the failure  
+**And** update the workflow state with error details
 
-#### Scenario 4: Handle upload failures
-**Given** I attempt to upload an invalid or corrupted PDF file  
-**When** the upload operation is executed  
-**Then** the application should handle the error gracefully  
-**And** provide clear error messages about the failure
+#### Scenario 4: Prepare for batch processing
+**Given** I have multiple PDF documents to process  
+**When** I configure the application for batch processing  
+**Then** the `EncodeFileNode` should be ready to handle sequential or parallel encoding  
+**And** manage resources appropriately across multiple files
 
 ## Technical Implementation Tasks
 
-### 1. Add New Graph Nodes
-- [ ] Create `UploadFileNode` to handle file uploads to Gemini API
-  - Implement file validation before upload
-  - Handle file path resolution (relative vs. absolute)
-  - Return file ID for subsequent operations
-- [ ] Create `DeleteFileNode` to clean up files after processing
-  - Add configurable option to retain files for debugging
-  - Implement proper error handling for deletion failures
+### 1. Create New EncodeFileNode
+- [ ] Design and implement `EncodeFileNode` class
+  - Add file validation and size checking
+  - Implement efficient file reading and encoding
+  - Handle various file encoding errors
+  - Support progress tracking for large files
+- [ ] Update `GraphState` to store encoded file content
+  - Add fields for tracking encoding status and metrics
 
 ### 2. Modify Existing Graph Structure
-- [ ] Update `gemini_graph.py` to include new file handling nodes
-  - Add `UploadFileNode` before `CreatePrompt`
-  - Add `DeleteFileNode` after `ExportToCSV`
-- [ ] Modify state object to track file IDs and statuses
+- [ ] Update `gemini_graph.py` to include the new encoding node
+  - Position `EncodeFileNode` between `ConfigureAPI` and `CreatePrompt`
+  - Ensure proper state handoff between nodes
+- [ ] Modify `CreatePrompt` to use pre-encoded content from state
 
-### 3. API Integration
-- [ ] Implement Gemini file API client integration
-  - Use `client.files.upload()` method for uploading files
-  - Use `client.files.delete()` method for cleanup
-- [ ] Add proper authentication and error handling
-- [ ] Implement retry logic for transient API failures
+### 3. Async Foundations
+- [ ] Implement the node with async-compatible architecture
+  - Ensure the encoding operation can be processed asynchronously in the future
+  - Add cancellation support for long-running encoding operations
+- [ ] Add resource management hooks for future parallel processing
 
-### 4. Update Prompt Structure
-- [ ] Modify prompt templates to reference uploaded files
-  - Replace base64 encoding with file references
-  - Update schema to support file ID references
+### 4. Memory Optimization
+- [ ] Implement streaming file encoding for large files
+  - Use buffer-based approaches for large files
+  - Add file size thresholds for different encoding strategies
+- [ ] Add memory usage monitoring during encoding
 
 ### 5. Testing
-- [ ] Create unit tests for new file handling nodes
-- [ ] Add integration tests for the entire workflow with file uploading
-- [ ] Test edge cases (large files, invalid files, API failures)
+- [ ] Create unit tests for the new encoding node
+  - Test with various file sizes and types
+  - Test error handling and edge cases
+- [ ] Add integration tests for the entire workflow with the new node
+- [ ] Benchmark performance with different file sizes
 
 ### 6. Documentation
-- [ ] Update project documentation to reflect new file handling approach
-- [ ] Add examples of using the new file upload capabilities
-- [ ] Document failure scenarios and how they're handled
+- [ ] Document the new node and its configuration options
+- [ ] Add examples of customizing encoding behavior
+- [ ] Update workflow diagrams to include the new node
 
 ## Implementation Notes
 
-### Gemini Files API
-Based on the Gemini API documentation, we'll use the following methods:
+### File Encoding Approach
+We'll implement efficient file encoding with the following considerations:
 
 ```python
-# Upload a file
-file = client.files.upload(
-    path="/path/to/file.pdf",  # Local file path
-    display_name="SEC Filing",  # Optional display name
-    mime_type="application/pdf"  # Specify MIME type
-)
-
-# Use the file in a prompt
-response = client.generate_content(
-    contents=[
-        {
-            "file_data": {
-                "file_uri": file.uri,
-                "mime_type": "application/pdf"
+# New encode file node
+class EncodeFileNode(BaseNode[GraphState]):
+    async def run(self, ctx: GraphRunContext[GraphState]) -> CreatePrompt:
+        # Validate file existence
+        filepath = Path(ctx.state.document_path)
+        if not filepath.exists():
+            ctx.state.error = {
+                "type": "file_error",
+                "message": "File not found",
+                "details": f"The file at {filepath} does not exist"
             }
-        },
-        "Extract company information from this document"
-    ]
-)
-
-# Delete the file when done
-client.files.delete(name=file.name)
+            return CreatePrompt()
+            
+        # Check file size and choose encoding strategy
+        file_size_mb = filepath.stat().st_size / (1024 * 1024)
+        print(f"Encoding file: {filepath} (Size: {file_size_mb:.2f} MB)")
+        
+        try:
+            # For smaller files, read all at once
+            if file_size_mb < 10:
+                file_bytes = filepath.read_bytes()
+            else:
+                # For larger files, consider chunked reading in future
+                # This is a placeholder for future optimization
+                file_bytes = filepath.read_bytes()
+                
+            # Store encoded content in state
+            ctx.state.encoded_file = {
+                "bytes": file_bytes,
+                "mime_type": ctx.state.document_mime_type,
+                "size": len(file_bytes)
+            }
+            
+            print(f"Successfully encoded {len(file_bytes)} bytes")
+            return CreatePrompt()
+            
+        except Exception as e:
+            ctx.state.error = {
+                "type": "encoding_error",
+                "message": "Failed to encode file",
+                "details": str(e)
+            }
+            return CreatePrompt()
 ```
 
-### Pydantic Graph Integration
-We'll integrate with the existing pydantic-graph workflow:
+### GraphState Modifications
+We'll extend the `GraphState` model to include encoding information:
 
 ```python
-# New file upload node
-class UploadFileNode(BaseNode[GraphState]):
-    def run(self, ctx: GraphRunContext[GraphState]):
-        file_path = ctx.state.document_path
-        file = ctx.state.client.files.upload(
-            path=file_path,
-            mime_type=ctx.state.document_mime_type
-        )
-        ctx.state.file_id = file.name
-        ctx.state.file_uri = file.uri
-        return CreatePrompt()
+class GraphState(BaseModel):
+    # Existing fields...
+    
+    # New fields for encoded file
+    encoded_file: Dict[str, Any] = None
+    encoding_metrics: Dict[str, Any] = None
+```
 
-# Modified graph definition
+### Modified Graph Definition
+The workflow will be updated to include the new encoding node:
+
+```python
 gemini_graph = Graph(
-    [
-        ConfigureAPI,
-        UploadFileNode,  # New node
-        CreatePrompt,
-        SanitizePrompt,
-        ExecuteAPI,
-        PrintResponse,
-        ExportToCSV,
-        DeleteFileNode   # New node
+    nodes=[
+        ConfigureAPI,        # Returns EncodeFileNode
+        EncodeFileNode,      # Returns CreatePrompt
+        CreatePrompt,        # Returns SanitizePrompt
+        SanitizePrompt,      # Returns ExecuteAPI
+        ExecuteAPI,          # Returns PrintResponse
+        PrintResponse,       # Returns ExportToCSV
+        ExportToCSV          # Returns End
     ]
 )
 ```
 
 ## Definition of Done
-- All tasks are completed and code is reviewed
-- All tests pass, including edge cases
-- Documentation is updated
-- The application can process documents of all supported sizes
-- File cleanup is reliable, with no orphaned files
-- Performance metrics show improvement over the encoding-based approach 
+- `EncodeFileNode` is implemented and integrated into the workflow
+- File encoding is performed efficiently for various file sizes
+- The node provides proper error handling and reporting
+- The architecture supports future async operations
+- Tests verify correct behavior in all scenarios
+- Documentation is updated to reflect the new workflow architecture
+- The solution is more maintainable than the previous approach 
