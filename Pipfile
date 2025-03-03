@@ -13,6 +13,9 @@ pdf-analyst = {file = ".", editable = true}
 [dev-packages]
 black = "*"
 isort = "*"
+pytest = "*"
+pytest-asyncio = "*"
+pytest-cov = "*"
 
 [requires]
 python_version = "3.13"

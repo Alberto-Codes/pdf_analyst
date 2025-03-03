@@ -1,13 +1,15 @@
 from dataclasses import dataclass
-import os
 import logging
+import os
 import sys
+from typing import Optional
 
-from pdf_workflow.config.state import GraphState
 from google import genai
 from google.genai import types
-from pdf_workflow.nodes.create_prompt import CreatePrompt
 from pydantic_graph import BaseNode, GraphRunContext
+
+from pdf_workflow.config.state import GraphState
+from pdf_workflow.nodes.encode_file import EncodeFileNode
 
 
 @dataclass
@@ -23,7 +25,7 @@ class ConfigureAPI(BaseNode[GraphState]):
         and accessed through `ctx.state` during execution.
     """
 
-    async def run(self, ctx: GraphRunContext[GraphState]) -> CreatePrompt:
+    async def run(self, ctx: GraphRunContext[GraphState]) -> EncodeFileNode:
         """Sets up the Gemini API client and generation parameters.
 
         This method initializes the Gemini client and configures the content
@@ -36,7 +38,7 @@ class ConfigureAPI(BaseNode[GraphState]):
                 `GraphState`, which holds configuration parameters.
 
         Returns:
-            CreatePrompt: The next node responsible for prompt creation.
+            EncodeFileNode: The next node responsible for file encoding.
         """
         # Check credentials file exists
         creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
@@ -46,14 +48,14 @@ class ConfigureAPI(BaseNode[GraphState]):
                 creds_path = os.path.abspath(creds_path)
                 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
             
-            print(f"Using credentials file: {creds_path}")
+            logging.info(f"Using credentials file: {creds_path}")
             if not os.path.exists(creds_path):
-                print(f"Error: Credentials file not found at {creds_path}")
-                print("Cannot continue without valid credentials.")
+                logging.error(f"Credentials file not found at {creds_path}")
+                logging.error("Cannot continue without valid credentials.")
                 sys.exit(1)
         else:
-            print("Error: GOOGLE_APPLICATION_CREDENTIALS environment variable not set")
-            print("Cannot continue without valid credentials.")
+            logging.error("GOOGLE_APPLICATION_CREDENTIALS environment variable not set")
+            logging.error("Cannot continue without valid credentials.")
             sys.exit(1)
 
         # Initialize the Gemini API client
@@ -83,6 +85,6 @@ class ConfigureAPI(BaseNode[GraphState]):
             response_schema=ctx.state.response_schema,
         )
 
-        # Proceed to the next node for prompt creation
-        return CreatePrompt()
+        # Proceed to the next node for file encoding
+        return EncodeFileNode()
 

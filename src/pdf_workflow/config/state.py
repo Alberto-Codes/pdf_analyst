@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Dict, Any, List, Optional
 
 from google import genai
 from google.genai import types
@@ -45,7 +45,14 @@ class GraphState(BaseModel):
             Defaults to `"exported_response"`.
         contents (list[types.Part]): List of content parts for the API request.
             Defaults to an empty list.
-
+        encoded_file (Dict[str, Any] | None): Information about the encoded file.
+            Includes bytes, mime_type, size, and path. Defaults to `None`.
+        encoding_metrics (Dict[str, Any] | None): Metrics related to file encoding.
+            Includes file_size_bytes, encoding_strategy, success, and errors.
+            Defaults to `None`.
+        error (Dict[str, Any] | None): Error information if any occurs during processing.
+            Includes type, message, and details. Defaults to `None`.
+            
     Configuration:
         model_config (ConfigDict): Allows arbitrary types in the model to
             enable flexibility in handling different data types.
@@ -68,3 +75,8 @@ class GraphState(BaseModel):
     export_dir: Path = Path("data")
     export_file_name: str = "exported_response"
     contents: list[types.Part] = []
+    
+    # New fields for encoded file data
+    encoded_file: Dict[str, Any] | None = None
+    encoding_metrics: Dict[str, Any] | None = None
+    error: Dict[str, Any] | None = None
